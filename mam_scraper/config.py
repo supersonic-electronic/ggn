@@ -17,6 +17,9 @@ MAM_BASE_URL = os.getenv("MAM_BASE_URL", "https://www.myanonamouse.net")
 LOGIN_MODE = os.getenv("LOGIN_MODE", "form")
 FIREFOX_PROFILE_PATH = os.getenv("FIREFOX_PROFILE_PATH", "")
 
+# VPN Bypass: Use firejail to bypass VPN (requires firefox-no-vpn-wrapper.sh)
+USE_VPN_BYPASS = os.getenv("USE_VPN_BYPASS", "True").lower() in ("true", "1", "yes")
+
 # Search definitions
 # Each search targets specific combinations of tags and filetypes
 SEARCHES = [

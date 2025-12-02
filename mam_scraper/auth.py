@@ -20,16 +20,37 @@ async def create_browser_context(playwright_instance):
     Returns:
         Tuple of (browser, context) objects
     """
+    import os
+
+    # Get the wrapper script path (in same directory as this file)
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    firefox_wrapper = os.path.join(script_dir, "firefox-no-vpn-wrapper.sh")
+
+    # Determine if we should use the VPN bypass wrapper
+    use_vpn_bypass = os.path.exists(firefox_wrapper) and config.USE_VPN_BYPASS
+
+    if use_vpn_bypass:
+        logger.info("Using Firefox with VPN bypass (firejail)")
+        executable_path = firefox_wrapper
+    else:
+        logger.info("Using standard Firefox")
+        executable_path = None
+
     if config.LOGIN_MODE == "cookies" and config.FIREFOX_PROFILE_PATH:
         logger.info(f"Using existing Firefox profile: {config.FIREFOX_PROFILE_PATH}")
 
         # Launch browser with existing profile
-        browser = await playwright_instance.firefox.launch_persistent_context(
-            user_data_dir=config.FIREFOX_PROFILE_PATH,
-            headless=config.BROWSER_HEADLESS,
-            # Accept downloads if needed
-            accept_downloads=True,
-        )
+        launch_options = {
+            "user_data_dir": config.FIREFOX_PROFILE_PATH,
+            "headless": config.BROWSER_HEADLESS,
+            "accept_downloads": True,
+        }
+
+        # Add executable path if using VPN bypass
+        if executable_path:
+            launch_options["executable_path"] = executable_path
+
+        browser = await playwright_instance.firefox.launch_persistent_context(**launch_options)
         # In persistent context mode, browser IS the context
         return browser, browser
 
@@ -37,14 +58,18 @@ async def create_browser_context(playwright_instance):
         logger.info("Using fresh browser context (form login mode)")
 
         # Launch regular browser
+        launch_options = {
+            "headless": config.BROWSER_HEADLESS
+        }
+
+        # Add executable path if using VPN bypass
+        if executable_path:
+            launch_options["executable_path"] = executable_path
+
         if config.BROWSER_TYPE == "firefox":
-            browser = await playwright_instance.firefox.launch(
-                headless=config.BROWSER_HEADLESS
-            )
+            browser = await playwright_instance.firefox.launch(**launch_options)
         else:
-            browser = await playwright_instance.chromium.launch(
-                headless=config.BROWSER_HEADLESS
-            )
+            browser = await playwright_instance.chromium.launch(**launch_options)
 
         context = await browser.new_context(
             # Set a realistic user agent

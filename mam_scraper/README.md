@@ -11,6 +11,7 @@ Designed with polite crawling practices, rate limiting, and structured data stor
 
 ## Features
 
+- **VPN Bypass**: Automatic VPN bypass using firejail (optional)
 - **Polite Crawling**: Built-in rate limiting (3-7s delays, long pauses every 15 pages)
 - **Dual Authentication**: Support for Firefox profile cookies or form-based login
 - **Configurable Searches**: Multiple search configurations for different tags/filetypes
@@ -23,33 +24,39 @@ Designed with polite crawling practices, rate limiting, and structured data stor
 
 ```
 mam_scraper/
-├── .env.example          # Environment variable template
-├── requirements.txt      # Python dependencies
-├── config.py            # Search definitions and settings
-├── auth.py              # Login and authentication
-├── filters.py           # Search filter application
-├── scraper.py           # Detail page data extraction
-├── crawler.py           # Main crawling logic with pagination
-├── db.py                # SQLite database operations
-├── utils.py             # Timing and helper utilities
-├── main.py              # CLI entry point
-├── export_to_csv.py     # CSV export tool
-└── logs/                # Error logs directory
+├── .env.example                # Environment variable template
+├── requirements.txt            # Python dependencies
+├── config.py                   # Search definitions and settings
+├── auth.py                     # Login and authentication
+├── filters.py                  # Search filter application
+├── scraper.py                  # Detail page data extraction
+├── crawler.py                  # Main crawling logic with pagination
+├── db.py                       # SQLite database operations
+├── utils.py                    # Timing and helper utilities
+├── main.py                     # CLI entry point
+├── export_to_csv.py            # CSV export tool
+├── firefox-no-vpn-wrapper.sh   # VPN bypass wrapper (firejail)
+├── login-to-profile.sh         # Helper to log into MAM profile
+├── VPN-BYPASS-SETUP.md         # VPN bypass documentation
+└── logs/                       # Error logs directory
 ```
 
 ## Installation
 
 ### 1. Prerequisites
 
-- Python 3.8 or higher
+- Python 3.11 or higher (Note: Python 3.13 not yet supported)
 - pip (Python package manager)
 - A MyAnonamouse account
+- firejail (optional, for VPN bypass)
 
 ### 2. Set Up Virtual Environment
 
 ```bash
 cd mam_scraper
-python -m venv .venv
+
+# Use Python 3.11 (not 3.13)
+python3.11 -m venv .venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 ```
 
@@ -60,7 +67,16 @@ pip install -r requirements.txt
 playwright install firefox
 ```
 
-### 4. Configure Environment
+### 4. Create Firefox Profile
+
+The scraper uses a dedicated Firefox profile (MAM-Scraper) which is created automatically:
+
+```bash
+# Create the profile (done automatically on first run)
+firefox -CreateProfile "MAM-Scraper"
+```
+
+### 5. Configure Environment
 
 Create a `.env` file from the template:
 
@@ -68,32 +84,82 @@ Create a `.env` file from the template:
 cp .env.example .env
 ```
 
-Edit `.env` with your credentials:
+Find your MAM-Scraper profile path:
+
+```bash
+ls ~/.mozilla/firefox/ | grep MAM-Scraper
+# Output example: i07xqr33.MAM-Scraper
+```
+
+Edit `.env` with your profile path:
 
 ```env
-# MyAnonamouse Credentials
-MAM_USERNAME=your_username
-MAM_PASSWORD=your_password
-MAM_BASE_URL=https://www.myanonamouse.net
+# Authentication Mode: "cookies" (recommended) or "form"
+LOGIN_MODE=cookies
 
-# Authentication Mode: "cookies" or "form"
-LOGIN_MODE=form
+# Firefox Profile Path - update XXXXXXXX with your actual profile ID
+FIREFOX_PROFILE_PATH=/home/username/.mozilla/firefox/XXXXXXXX.MAM-Scraper
 
-# Firefox Profile Path (only if LOGIN_MODE=cookies)
-# FIREFOX_PROFILE_PATH=/home/username/.mozilla/firefox/xxxxx.default
+# VPN Bypass: Bypass VPN using firejail (optional)
+USE_VPN_BYPASS=True
 ```
+
+### 6. Log Into MyAnonamouse (One-Time Setup)
+
+**IMPORTANT**: Before running the scraper, log into MyAnonamouse in the MAM-Scraper profile:
+
+```bash
+./login-to-profile.sh
+```
+
+This will:
+1. Open Firefox with VPN bypass (if enabled)
+2. Navigate to MyAnonamouse
+3. Let you log in with your credentials
+4. Save cookies in the MAM-Scraper profile
+
+**Close Firefox after logging in.**
 
 ### Authentication Modes
 
-**Mode 1: Form Login (`LOGIN_MODE=form`)**
-- Scripted login using username/password
-- Simpler setup, credentials stored in `.env`
-- Recommended for most users
+**Mode 1: Cookie Reuse (RECOMMENDED - Default)**
+- Uses dedicated MAM-Scraper Firefox profile with saved cookies
+- No credentials stored in `.env` file
+- Supports VPN bypass via firejail
+- Requires one-time login via `./login-to-profile.sh`
 
-**Mode 2: Cookie Reuse (`LOGIN_MODE=cookies`)**
-- Uses existing Firefox profile with saved cookies
-- Set `FIREFOX_PROFILE_PATH` to your Firefox profile directory
-- More complex but avoids storing credentials
+**Mode 2: Form Login**
+- Scripted login using username/password
+- Credentials stored in `.env`
+- Also supports VPN bypass
+
+```env
+LOGIN_MODE=form
+MAM_USERNAME=your_username
+MAM_PASSWORD=your_password
+USE_VPN_BYPASS=True
+```
+
+### VPN Bypass (Optional)
+
+If you're behind a VPN and need to access MyAnonamouse directly:
+
+1. Install firejail:
+```bash
+sudo dnf install firejail  # Fedora
+# or
+sudo apt install firejail  # Ubuntu/Debian
+```
+
+2. Update network settings in `firefox-no-vpn-wrapper.sh` if needed:
+```bash
+# Edit the script to match your network interface and IP
+nano firefox-no-vpn-wrapper.sh
+```
+
+3. Set `USE_VPN_BYPASS=True` in `.env` (default)
+
+See **VPN-BYPASS-SETUP.md** for detailed documentation.
 
 ## Usage
 
