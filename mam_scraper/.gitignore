@@ -38,8 +38,14 @@ env/
 logs/
 *.log
 
+# Process IDs
+*.pid
+
 # CSV Exports (may contain sensitive data)
 *.csv
+
+# LibreOffice lock files
+.~lock.*#
 
 # Screenshots from tests
 *.png

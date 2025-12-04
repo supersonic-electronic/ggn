@@ -131,66 +131,60 @@ async def extract_torrent_links(page: Page) -> List[str]:
     """
     Extract all torrent detail page links from the current results page.
 
+    Returns clean URLs in format: https://www.myanonamouse.net/t/1234567
+    Filters out:
+    - Forum post links (/f/t/)
+    - Duplicate torrents with different URL parameters
+    - Non-torrent links
+
     Args:
         page: Playwright page object
 
     Returns:
-        List of torrent detail URLs
+        List of clean torrent detail URLs
     """
+    import re
+
     links = []
+    seen_torrent_ids = set()
 
     try:
-        # IMPORTANT: These selectors need to be verified by inspecting the actual results page
-        # Torrent links typically go to /t/ID or /tor/ID
+        # Get all links that contain /t/
+        elements = await page.query_selector_all('a[href*="/t/"]')
+        logger.debug(f"Found {len(elements)} links containing /t/")
 
-        # Try multiple selector patterns for torrent rows
-        torrent_selectors = [
-            'a[href*="/t/"]',
-            'a[href*="/tor/"]',
-            'table.torrent-table a[href*="/t/"]',
-            '.torrent-row a[href*="/t/"]',
-            'tr.torrent a[href*="/t/"]',
-        ]
-
-        for selector in torrent_selectors:
-            try:
-                elements = await page.query_selector_all(selector)
-                if elements:
-                    logger.debug(f"Found {len(elements)} elements with selector: {selector}")
-
-                    for element in elements:
-                        href = await element.get_attribute("href")
-                        if href and "/t/" in href:
-                            # Make absolute URL
-                            if href.startswith("/"):
-                                full_url = config.MAM_BASE_URL + href
-                            elif href.startswith("http"):
-                                full_url = href
-                            else:
-                                continue
-
-                            # Only add unique URLs
-                            if full_url not in links:
-                                links.append(full_url)
-
-                    if links:
-                        # Successfully found links with this selector
-                        break
-
-            except Exception as e:
-                logger.debug(f"Selector {selector} failed: {e}")
+        for element in elements:
+            href = await element.get_attribute("href")
+            if not href:
                 continue
 
-        # Remove duplicates while preserving order
-        seen = set()
-        unique_links = []
-        for link in links:
-            if link not in seen:
-                seen.add(link)
-                unique_links.append(link)
+            # Skip forum post links (they have /f/t/ instead of just /t/)
+            if "/f/t/" in href:
+                logger.debug(f"Skipping forum link: {href}")
+                continue
 
-        logger.debug(f"Extracted {len(unique_links)} unique torrent links")
-        return unique_links
+            # Extract torrent ID using regex
+            # Match pattern like /t/1234567 (with or without query params)
+            match = re.search(r'/t/(\d+)', href)
+            if not match:
+                continue
+
+            torrent_id = match.group(1)
+
+            # Skip if we've already seen this torrent ID
+            if torrent_id in seen_torrent_ids:
+                logger.debug(f"Skipping duplicate torrent ID: {torrent_id}")
+                continue
+
+            # Build clean URL with just the torrent ID
+            clean_url = f"{config.MAM_BASE_URL}/t/{torrent_id}"
+
+            links.append(clean_url)
+            seen_torrent_ids.add(torrent_id)
+            logger.debug(f"Added torrent: {clean_url}")
+
+        logger.info(f"Extracted {len(links)} unique, clean torrent links")
+        return links
 
     except Exception as e:
         logger.error(f"Error extracting torrent links: {e}")
@@ -201,6 +195,9 @@ async def go_to_next_page(page: Page) -> bool:
     """
     Navigate to the next page of search results if available.
 
+    Uses MyAnonamouse-specific pagination button:
+    <input type="button" data-newstartlocation="100" class="nextPage" value="next page">
+
     Args:
         page: Playwright page object
 
@@ -208,38 +205,32 @@ async def go_to_next_page(page: Page) -> bool:
         True if successfully navigated to next page, False if no next page
     """
     try:
-        # IMPORTANT: These selectors need to be verified by inspecting the actual pagination
-        next_page_selectors = [
-            'a.next-page',
-            'a[rel="next"]',
-            'a:has-text("Next")',
-            'a:has-text(">")',
-            '.pagination a:has-text("Next")',
-            '.pagination a:last-child',
-            'a[href*="page="]',
-        ]
+        # MyAnonamouse-specific next page button selector
+        next_button = await page.query_selector('input.nextPage[type="button"]')
 
-        for selector in next_page_selectors:
-            try:
-                element = await page.query_selector(selector)
-                if element:
-                    # Check if the link is disabled (some sites disable the last page link)
-                    is_disabled = await element.evaluate("el => el.classList.contains('disabled')")
-                    if is_disabled:
-                        continue
+        if not next_button:
+            logger.debug("No next page button found")
+            return False
 
-                    logger.debug(f"Clicking next page with selector: {selector}")
-                    await element.click()
-                    await page.wait_for_load_state("networkidle", timeout=30000)
-                    logger.info("Successfully navigated to next page")
-                    return True
+        # Check if button is visible and enabled
+        is_visible = await next_button.is_visible()
+        is_enabled = await next_button.is_enabled()
 
-            except Exception as e:
-                logger.debug(f"Next page selector {selector} failed: {e}")
-                continue
+        if not is_visible or not is_enabled:
+            logger.debug("Next page button exists but is not clickable")
+            return False
 
-        logger.debug("No next page link found")
-        return False
+        # Get the data-newstartlocation to log where we're going
+        new_start = await next_button.get_attribute("data-newstartlocation")
+        logger.info(f"Clicking next page button (start location: {new_start})")
+
+        # Click the button
+        await next_button.click()
+
+        # Wait for navigation to complete
+        await page.wait_for_load_state("networkidle", timeout=30000)
+        logger.info("Successfully navigated to next page")
+        return True
 
     except Exception as e:
         logger.error(f"Error navigating to next page: {e}")

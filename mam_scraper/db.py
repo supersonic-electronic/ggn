@@ -33,6 +33,7 @@ def init_db(db_path: str = "mam.db") -> sqlite3.Connection:
             detail_url TEXT UNIQUE NOT NULL,
             title TEXT,
             author TEXT,
+            co_author TEXT,
             size TEXT,
             tags TEXT,
             files_number INTEGER,
@@ -48,6 +49,14 @@ def init_db(db_path: str = "mam.db") -> sqlite3.Connection:
             UNIQUE(detail_url)
         )
     """)
+
+    # Migration: Add co_author column if it doesn't exist (for existing databases)
+    try:
+        cursor.execute("SELECT co_author FROM mam_torrents LIMIT 1")
+    except sqlite3.OperationalError:
+        logger.info("Adding co_author column to existing database")
+        cursor.execute("ALTER TABLE mam_torrents ADD COLUMN co_author TEXT")
+        conn.commit()
 
     # Create index on detail_url for faster lookups
     cursor.execute("""
@@ -94,11 +103,11 @@ def save_to_db(conn: sqlite3.Connection, record: Dict[str, Any]) -> bool:
     try:
         cursor.execute("""
             INSERT OR REPLACE INTO mam_torrents (
-                detail_url, title, author, size, tags, files_number,
+                detail_url, title, author, co_author, size, tags, files_number,
                 filetypes, added_time, description_html, cover_image_url,
                 torrent_url, search_label, search_position, search_url, scraped_at
             ) VALUES (
-                :detail_url, :title, :author, :size, :tags, :files_number,
+                :detail_url, :title, :author, :co_author, :size, :tags, :files_number,
                 :filetypes, :added_time, :description_html, :cover_image_url,
                 :torrent_url, :search_label, :search_position, :search_url, :scraped_at
             )

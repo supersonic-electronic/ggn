@@ -36,7 +36,8 @@ async def create_browser_context(playwright_instance):
         logger.info("Using standard Firefox")
         executable_path = None
 
-    if config.LOGIN_MODE == "cookies" and config.FIREFOX_PROFILE_PATH:
+    # If a Firefox profile path is configured, always use it (for VPN bypass and/or cookies)
+    if config.FIREFOX_PROFILE_PATH:
         logger.info(f"Using existing Firefox profile: {config.FIREFOX_PROFILE_PATH}")
 
         # Launch browser with existing profile
@@ -55,7 +56,7 @@ async def create_browser_context(playwright_instance):
         return browser, browser
 
     else:
-        logger.info("Using fresh browser context (form login mode)")
+        logger.info("Using fresh browser context (no profile)")
 
         # Launch regular browser
         launch_options = {
@@ -262,21 +263,16 @@ async def ensure_logged_in(page: Page) -> bool:
         logger.info("Already logged in - no authentication needed")
         return True
 
-    # Not logged in - attempt login if in form mode
-    if config.LOGIN_MODE == "form":
-        if not config.MAM_USERNAME or not config.MAM_PASSWORD:
-            logger.error("Form login mode but credentials not configured")
-            return False
-
+    # Not logged in - attempt login if credentials are available
+    if config.MAM_USERNAME and config.MAM_PASSWORD:
         logger.info("Not logged in - attempting form login...")
         return await perform_login(page, config.MAM_USERNAME, config.MAM_PASSWORD)
 
-    elif config.LOGIN_MODE == "cookies":
-        logger.error("Cookie mode but not logged in - please log in manually in Firefox")
-        return False
-
     else:
-        logger.error(f"Unknown login mode: {config.LOGIN_MODE}")
+        logger.error("Not logged in and no credentials configured")
+        logger.error("Please either:")
+        logger.error("  1. Set MAM_USERNAME and MAM_PASSWORD in .env for form login")
+        logger.error("  2. Log in manually in Firefox first if using cookie mode")
         return False
 
 

@@ -33,11 +33,13 @@ mam_scraper/
 ├── crawler.py                  # Main crawling logic with pagination
 ├── db.py                       # SQLite database operations
 ├── utils.py                    # Timing and helper utilities
-├── main.py                     # CLI entry point
+├── mam_scraper_cli.py          # Production CLI interface (NEW!)
+├── main.py                     # Legacy CLI entry point
 ├── export_to_csv.py            # CSV export tool
+├── run-with-vpn-bypass.sh      # VPN bypass runner script
 ├── firefox-no-vpn-wrapper.sh   # VPN bypass wrapper (firejail)
 ├── login-to-profile.sh         # Helper to log into MAM profile
-├── VPN-BYPASS-SETUP.md         # VPN bypass documentation
+├── README_VPN_BYPASS.md        # VPN bypass documentation
 └── logs/                       # Error logs directory
 ```
 
@@ -163,7 +165,37 @@ See **VPN-BYPASS-SETUP.md** for detailed documentation.
 
 ## Usage
 
-### Basic Commands
+### Production CLI (Recommended)
+
+The new production CLI (`mam_scraper_cli.py`) provides flexible tag-based searching:
+
+```bash
+# Scrape 500 video game epubs
+python3 mam_scraper_cli.py --tags "Video Game" --formats epub --max-torrents 500
+
+# Multiple formats
+python3 mam_scraper_cli.py --tags "SciFi" --formats epub pdf mobi --max-torrents 1000
+
+# Multiple tags
+python3 mam_scraper_cli.py --tags "Video Game" "Fantasy" --formats epub --max-torrents 500
+
+# With CSV export
+python3 mam_scraper_cli.py --tags "Video Game" --formats epub --max-torrents 500 --export
+
+# Custom database
+python3 mam_scraper_cli.py --tags "SciFi" --formats epub --max-torrents 300 --db scifi.db
+
+# Dry run (test without scraping)
+python3 mam_scraper_cli.py --tags "Video Game" --formats epub --max-torrents 500 --dry-run
+
+# Export only (no scraping)
+python3 mam_scraper_cli.py --export-only --db mam.db
+
+# Full help
+python3 mam_scraper_cli.py --help
+```
+
+### Legacy main.py Interface
 
 ```bash
 # Test mode (1 page, 5 torrents max)

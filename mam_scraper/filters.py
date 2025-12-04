@@ -1,6 +1,6 @@
 """
 Filter application module for MyAnonamouse search/browse pages.
-Applies category, language, tags, and filetype filters.
+SIMPLIFIED: Uses the search box since default filters are already set on MyM account.
 """
 import logging
 from typing import Dict, Any
@@ -13,21 +13,27 @@ logger = logging.getLogger(__name__)
 
 async def apply_filters(page: Page, search: Dict[str, Any]) -> str:
     """
-    Apply search filters for category, language, tags, and filetypes.
+    Apply search by typing in the search box.
+
+    NOTE: This assumes you've already set your default filters on MyAnonamouse:
+    - Category: eBooks
+    - Language: English
+    - Tags: Enabled
+    - Filetype: Enabled
+
+    We just need to type the search query and submit.
 
     Args:
         page: Playwright page object
         search: Search configuration dictionary containing:
             - label: Search label for tracking
-            - category: Category filter (e.g., "eBooks")
-            - language: Language filter (e.g., "English")
-            - tags: List of tags to filter by (e.g., ["Video Game"])
+            - tags: List of tags to search for (e.g., ["Video Game"])
             - filetypes: List of filetypes (e.g., ["epub", "pdf"])
 
     Returns:
-        The resulting search URL after filters are applied
+        The resulting search URL after search is submitted
     """
-    logger.info(f"Applying filters for search: {search['label']}")
+    logger.info(f"Applying search for: {search['label']}")
 
     # Navigate to browse page
     browse_url = f"{config.MAM_BASE_URL}/tor/browse.php"
@@ -37,211 +43,45 @@ async def apply_filters(page: Page, search: Dict[str, Any]) -> str:
         await page.goto(browse_url, wait_until="networkidle", timeout=30000)
         await safe_sleep(config.SAFE_CRAWL, is_long=False)
 
-        # IMPORTANT: All these selectors need to be verified by inspecting the actual site
-        # The following are common patterns but may need adjustment
+        # Build search query from tags and filetypes
+        search_terms = []
 
-        # 1. Set Category filter
-        if search.get("category"):
-            category = search["category"]
-            logger.debug(f"Setting category: {category}")
-
-            # Try multiple possible selector patterns for category dropdown
-            category_selectors = [
-                'select[name="cat"]',
-                'select[name="category"]',
-                'select#cat',
-                'select#category',
-            ]
-
-            category_set = False
-            for selector in category_selectors:
-                try:
-                    if await page.query_selector(selector):
-                        await page.select_option(selector, label=category)
-                        category_set = True
-                        logger.debug(f"Category set using selector: {selector}")
-                        break
-                except Exception as e:
-                    logger.debug(f"Selector {selector} failed: {e}")
-                    continue
-
-            if not category_set:
-                logger.warning(f"Could not set category filter. Selector needs verification.")
-
-        # 2. Set Language filter
-        if search.get("language"):
-            language = search["language"]
-            logger.debug(f"Setting language: {language}")
-
-            language_selectors = [
-                'select[name="lang"]',
-                'select[name="language"]',
-                'select#lang',
-                'select#language',
-            ]
-
-            language_set = False
-            for selector in language_selectors:
-                try:
-                    if await page.query_selector(selector):
-                        await page.select_option(selector, label=language)
-                        language_set = True
-                        logger.debug(f"Language set using selector: {selector}")
-                        break
-                except Exception as e:
-                    logger.debug(f"Selector {selector} failed: {e}")
-                    continue
-
-            if not language_set:
-                logger.warning(f"Could not set language filter. Selector needs verification.")
-
-        # 3. Enable Tags filter toggle (if needed)
-        logger.debug("Enabling tags filter...")
-        tag_toggle_selectors = [
-            'input[name="tags"]',
-            'input#tags',
-            '#tag_toggle',
-            'input[type="checkbox"][name*="tag"]',
-        ]
-
-        for selector in tag_toggle_selectors:
-            try:
-                element = await page.query_selector(selector)
-                if element:
-                    is_checked = await element.is_checked()
-                    if not is_checked:
-                        await element.check()
-                        logger.debug(f"Tags toggle enabled using: {selector}")
-                    break
-            except Exception:
-                continue
-
-        # 4. Set Tags
+        # Add tags to search query
         if search.get("tags"):
-            tags = search["tags"]
-            logger.debug(f"Setting tags: {tags}")
+            search_terms.extend(search["tags"])
+            logger.debug(f"Search tags: {search['tags']}")
 
-            # Tags might be:
-            # - A text input where you type tag names
-            # - Checkboxes for each tag
-            # - A multi-select dropdown
+        # Add filetypes to search query (optional - may not be needed if filetype filter is set)
+        # if search.get("filetypes"):
+        #     search_terms.extend(search["filetypes"])
+        #     logger.debug(f"Search filetypes: {search['filetypes']}")
 
-            # Option A: Text input for tags
-            tag_input_selectors = [
-                'input[name="tags"]',
-                'input[name="tag"]',
-                'input#tags',
-                'input.tag-input',
-            ]
+        # Combine into single search string
+        search_query = " ".join(search_terms)
+        logger.info(f"Search query: '{search_query}'")
 
-            tag_input_found = False
-            for selector in tag_input_selectors:
-                try:
-                    if await page.query_selector(selector):
-                        # Type all tags separated by comma or space
-                        tag_string = ", ".join(tags)
-                        await page.fill(selector, tag_string)
-                        tag_input_found = True
-                        logger.debug(f"Tags filled using selector: {selector}")
-                        break
-                except Exception:
-                    continue
+        # Find the search box using the selector you provided
+        # Selector: input#torTitle or input[name="tor[text]"]
+        search_box_selector = '#torTitle'
 
-            # Option B: Individual checkboxes (if text input didn't work)
-            if not tag_input_found:
-                for tag in tags:
-                    checkbox_selectors = [
-                        f'input[type="checkbox"][value*="{tag}"]',
-                        f'input[type="checkbox"][name*="tag"][value*="{tag}"]',
-                        f'label:has-text("{tag}") input[type="checkbox"]',
-                    ]
+        logger.debug(f"Looking for search box: {search_box_selector}")
+        search_box = await page.query_selector(search_box_selector)
 
-                    for selector in checkbox_selectors:
-                        try:
-                            element = await page.query_selector(selector)
-                            if element:
-                                await element.check()
-                                logger.debug(f"Tag checkbox '{tag}' checked")
-                                break
-                        except Exception:
-                            continue
+        if not search_box:
+            # Try alternative selector
+            search_box_selector = 'input[name="tor[text]"]'
+            logger.debug(f"Trying alternative selector: {search_box_selector}")
+            search_box = await page.query_selector(search_box_selector)
 
-        # 5. Enable FileType filter toggle (if needed)
-        logger.debug("Enabling filetype filter...")
-        filetype_toggle_selectors = [
-            'input[name="filetype"]',
-            'input#filetype',
-            '#filetype_toggle',
-            'input[type="checkbox"][name*="filetype"]',
-        ]
+        if not search_box:
+            raise Exception("Could not find search box with selector #torTitle or input[name='tor[text]']")
 
-        for selector in filetype_toggle_selectors:
-            try:
-                element = await page.query_selector(selector)
-                if element:
-                    is_checked = await element.is_checked()
-                    if not is_checked:
-                        await element.check()
-                        logger.debug(f"Filetype toggle enabled using: {selector}")
-                    break
-            except Exception:
-                continue
+        logger.debug(f"Found search box, typing query: {search_query}")
+        await search_box.fill(search_query)
 
-        # 6. Set FileTypes
-        if search.get("filetypes"):
-            filetypes = search["filetypes"]
-            logger.debug(f"Setting filetypes: {filetypes}")
-
-            # Filetypes are likely checkboxes
-            for filetype in filetypes:
-                checkbox_selectors = [
-                    f'input[type="checkbox"][value="{filetype.lower()}"]',
-                    f'input[type="checkbox"][value="{filetype.upper()}"]',
-                    f'input[type="checkbox"][name*="filetype"][value*="{filetype}"]',
-                    f'label:has-text("{filetype}") input[type="checkbox"]',
-                ]
-
-                filetype_set = False
-                for selector in checkbox_selectors:
-                    try:
-                        element = await page.query_selector(selector)
-                        if element:
-                            await element.check()
-                            filetype_set = True
-                            logger.debug(f"Filetype '{filetype}' checked")
-                            break
-                    except Exception:
-                        continue
-
-                if not filetype_set:
-                    logger.warning(f"Could not check filetype: {filetype}")
-
-        # 7. Submit the search/filter form
-        logger.debug("Submitting search form...")
-        submit_selectors = [
-            'button[type="submit"]',
-            'input[type="submit"]',
-            'button:has-text("Search")',
-            'button:has-text("Apply")',
-            'button:has-text("Filter")',
-            'input[value="Search"]',
-        ]
-
-        submit_clicked = False
-        for selector in submit_selectors:
-            try:
-                element = await page.query_selector(selector)
-                if element:
-                    await element.click()
-                    submit_clicked = True
-                    logger.debug(f"Submit button clicked using: {selector}")
-                    break
-            except Exception:
-                continue
-
-        if not submit_clicked:
-            logger.warning("Could not find submit button - filters may not be applied")
-            # Some sites auto-submit on filter change, so this might be okay
+        # Simply press Enter in the search box (most reliable method)
+        logger.debug("Pressing Enter to submit search")
+        await search_box.press('Enter')
 
         # Wait for results to load
         logger.debug("Waiting for search results to load...")
@@ -250,12 +90,12 @@ async def apply_filters(page: Page, search: Dict[str, Any]) -> str:
 
         # Get the resulting URL
         result_url = page.url
-        logger.info(f"Filters applied. Result URL: {result_url}")
+        logger.info(f"Search complete. Result URL: {result_url}")
 
         return result_url
 
     except Exception as e:
-        logger.error(f"Error applying filters: {e}")
+        logger.error(f"Error applying search: {e}")
         raise
 
 
@@ -281,6 +121,7 @@ async def get_results_count(page: Page) -> int:
             '#results-count',
             'span:has-text("results")',
             'div:has-text("torrents")',
+            'div:has-text("found")',
         ]
 
         for selector in count_selectors:
@@ -314,7 +155,7 @@ if __name__ == "__main__":
 
     async def test_filters():
         """Test the filters module."""
-        print("Testing filters module...")
+        print("Testing simplified search (using default MyM filters)...")
 
         # Validate config first
         try:
@@ -326,16 +167,11 @@ if __name__ == "__main__":
 
         # Set up logging
         from utils import setup_logging
-        setup_logging(config.LOG_FILE, config.LOG_LEVEL)
+        setup_logging(config.LOG_FILE, "DEBUG")
 
         async with async_playwright() as p:
             browser, context = await create_browser_context(p)
-
-            # Create a new page
-            if config.LOGIN_MODE == "cookies":
-                page = await context.new_page()
-            else:
-                page = await context.new_page()
+            page = await context.new_page()
 
             # Ensure logged in
             if not await ensure_logged_in(page):
@@ -346,10 +182,11 @@ if __name__ == "__main__":
             # Test first search configuration
             test_search = config.SEARCHES[0]
             print(f"\nTesting search: {test_search['label']}")
+            print(f"Search query: {' '.join(test_search.get('tags', []))}")
 
             try:
                 result_url = await apply_filters(page, test_search)
-                print(f"✓ Filters applied successfully")
+                print(f"\n✓ Search completed successfully")
                 print(f"Result URL: {result_url}")
 
                 # Get results count
@@ -357,13 +194,14 @@ if __name__ == "__main__":
                 if count >= 0:
                     print(f"Found {count} results")
 
-                # Take a screenshot for verification
-                screenshot_path = "test_filters_result.png"
-                await page.screenshot(path=screenshot_path)
-                print(f"\nScreenshot saved to: {screenshot_path}")
+                # Wait a bit so you can see the results
+                print("\nWaiting 5 seconds so you can see the results...")
+                await asyncio.sleep(5)
 
             except Exception as e:
-                print(f"✗ Error testing filters: {e}")
+                print(f"✗ Error testing search: {e}")
+                import traceback
+                traceback.print_exc()
 
             await browser.close()
 

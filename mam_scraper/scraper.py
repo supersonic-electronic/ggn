@@ -1,12 +1,14 @@
 """
 Detail page scraper for MyAnonamouse torrent pages.
 Extracts all relevant metadata from individual torrent detail pages.
+UPDATED: Based on actual MyAnonamouse page structure inspection.
 """
 import logging
+import re
 from typing import Dict, Any, Optional
 from playwright.async_api import Page
 import config
-from utils import safe_sleep, normalize_tags, normalize_filetypes, parse_files_number
+from utils import safe_sleep
 
 logger = logging.getLogger(__name__)
 
@@ -20,18 +22,7 @@ async def scrape_detail_page(page: Page, url: str) -> Dict[str, Any]:
         url: URL of the detail page (/t/ID)
 
     Returns:
-        Dictionary containing all scraped fields:
-        - detail_url: URL of the detail page
-        - title: Book title
-        - author: Book author(s)
-        - size: Torrent size (e.g., "40.83 MiB")
-        - tags: Comma-separated tags
-        - files_number: Number of files
-        - filetypes: Comma-separated filetypes
-        - added_time: When torrent was added
-        - description_html: Full HTML description
-        - cover_image_url: URL to cover image
-        - torrent_url: Download URL for the torrent
+        Dictionary containing all scraped fields
     """
     logger.info(f"Scraping detail page: {url}")
 
@@ -45,6 +36,7 @@ async def scrape_detail_page(page: Page, url: str) -> Dict[str, Any]:
             "detail_url": url,
             "title": None,
             "author": None,
+            "co_author": None,
             "size": None,
             "tags": None,
             "files_number": 0,
@@ -55,114 +47,162 @@ async def scrape_detail_page(page: Page, url: str) -> Dict[str, Any]:
             "torrent_url": None,
         }
 
-        # IMPORTANT: All these selectors need to be verified by inspecting actual detail pages
-        # Based on your example URL: /t/1060422
+        # Get all text from the page for pattern matching
+        body_text = await page.inner_text("body")
+        lines = body_text.split("\n")
 
-        # 1. Extract Title
-        title_selectors = [
-            'h1.torrent-title',
-            'h1#torrent-title',
-            '.torrent-header h1',
-            'h1',  # Fallback to first h1
-        ]
-        result["title"] = await _extract_text(page, title_selectors, "title")
+        # Strategy: Find label lines and extract the next line as value
+        for i, line in enumerate(lines):
+            line_stripped = line.strip()
 
-        # 2. Extract Author
-        author_selectors = [
-            '.author',
-            '.torrent-author',
-            'span:has-text("Author:") + span',
-            'dt:has-text("Author") + dd',
-            'div:has-text("Author:") span',
-        ]
-        result["author"] = await _extract_text(page, author_selectors, "author")
+            # Title - line that says "Title" followed by the actual title
+            if line_stripped == "Title" and i + 1 < len(lines):
+                result["title"] = lines[i + 1].strip()
+                logger.debug(f"Found title: {result['title']}")
 
-        # 3. Extract Size
-        size_selectors = [
-            '.size',
-            '.torrent-size',
-            'span:has-text("Size:") + span',
-            'dt:has-text("Size") + dd',
-            'div:has-text("Size:") span',
-        ]
-        result["size"] = await _extract_text(page, size_selectors, "size")
+            # Author extraction is now done via HTML selector (see below)
+            # Tags extraction is now done via HTML selector (see below)
+            # This text-based approach is kept for other fields
 
-        # 4. Extract Tags
-        tags_selectors = [
-            '.tags',
-            '.torrent-tags',
-            'span:has-text("Tags:") + span',
-            'dt:has-text("Tags") + dd',
-            'div.tags span',
-        ]
-        tags_text = await _extract_text(page, tags_selectors, "tags")
-        if tags_text:
-            result["tags"] = normalize_tags(tags_text)
+            # Size - line with "KiB", "MiB" or "GiB"
+            elif ("KiB" in line_stripped or "MiB" in line_stripped or "GiB" in line_stripped) and result["size"] is None:
+                # Extract size value
+                size_match = re.search(r'([\d.]+\s+[KMG]iB)', line_stripped)
+                if size_match:
+                    result["size"] = size_match.group(1)
+                    logger.debug(f"Found size: {result['size']}")
 
-        # 5. Extract Files Number
-        files_selectors = [
-            '.files-count',
-            'span:has-text("Files:") + span',
-            'dt:has-text("Files") + dd',
-            'span:has-text("file")',
-        ]
-        files_text = await _extract_text(page, files_selectors, "files_number")
-        if files_text:
-            result["files_number"] = parse_files_number(files_text)
+            # Files number - line that says "Files" followed by number
+            elif line_stripped == "Files" and i + 1 < len(lines):
+                try:
+                    files_str = lines[i + 1].strip()
+                    result["files_number"] = int(files_str)
+                    logger.debug(f"Found files: {result['files_number']}")
+                except ValueError:
+                    pass
 
-        # 6. Extract Filetypes
-        filetype_selectors = [
-            '.filetypes',
-            '.file-types',
-            'span:has-text("Format:") + span',
-            'dt:has-text("Format") + dd',
-            'dt:has-text("Type") + dd',
-        ]
-        filetype_text = await _extract_text(page, filetype_selectors, "filetypes")
-        if filetype_text:
-            result["filetypes"] = normalize_filetypes(filetype_text)
+            # Filetypes - line that says "Filetypes" followed by types
+            elif line_stripped == "Filetypes" and i + 1 < len(lines):
+                filetypes_line = lines[i + 1].strip()
+                result["filetypes"] = filetypes_line
+                logger.debug(f"Found filetypes: {result['filetypes']}")
 
-        # 7. Extract Added Time
-        added_time_selectors = [
-            '.added-time',
-            '.upload-time',
-            'span:has-text("Added:") + span',
-            'dt:has-text("Added") + dd',
-            'time[datetime]',
-        ]
-        result["added_time"] = await _extract_text(page, added_time_selectors, "added_time")
+        # Author extraction - using HTML selector to get multiple authors
+        try:
+            # Find all author links: <a class="altColor" href="/tor/browse.php?author=...">
+            author_links = await page.query_selector_all('a.altColor[href*="/tor/browse.php?author="]')
 
-        # 8. Extract Description (HTML)
-        description_selectors = [
-            '.description',
-            '.torrent-description',
-            '#description',
-            'div.description',
-            '.torrent-details .description',
-        ]
-        result["description_html"] = await _extract_html(page, description_selectors, "description")
+            if author_links:
+                # Extract up to 2 authors
+                authors = []
+                for link in author_links[:2]:  # Limit to first 2 authors
+                    author_text = await link.inner_text()
+                    # Clean up the author name (remove &nbsp; and extra whitespace)
+                    author_name = author_text.strip().replace('\xa0', ' ').strip()
+                    if author_name:
+                        authors.append(author_name)
 
-        # 9. Extract Cover Image URL
-        cover_selectors = [
-            'img.cover',
-            'img.torrent-cover',
-            'img[alt*="cover"]',
-            '.cover-image img',
-            '.torrent-image img',
-        ]
-        result["cover_image_url"] = await _extract_image_url(page, cover_selectors, "cover_image")
+                # Assign primary and co-author
+                if len(authors) >= 1:
+                    result["author"] = authors[0]
+                    logger.debug(f"Found primary author: {result['author']}")
+                if len(authors) >= 2:
+                    result["co_author"] = authors[1]
+                    logger.debug(f"Found co-author: {result['co_author']}")
+        except Exception as e:
+            logger.warning(f"Could not extract authors: {e}")
 
-        # 10. Extract Torrent Download URL
-        download_selectors = [
-            'a[href*="/tor/download.php"]',
-            'a[href*="download"]',
-            'a.download-link',
-            'a:has-text("Download")',
-        ]
-        result["torrent_url"] = await _extract_link_url(page, download_selectors, "torrent_url")
+        # Tags extraction - using HTML selector for cleaner data
+        try:
+            # Find tags in: <span class="flex">Video Game, Fantasy, Art Book</span>
+            # There are multiple span.flex elements, tags are usually the one with most commas
+            flex_spans = await page.query_selector_all('span.flex')
 
-        # Log what we found
-        logger.info(f"Successfully scraped: {result['title']}")
+            if flex_spans:
+                # Find the span with the most commas (tags are comma-separated)
+                max_commas = 0
+                best_tags = None
+
+                for span in flex_spans:
+                    text = await span.inner_text()
+                    comma_count = text.count(',')
+                    if comma_count > max_commas:
+                        max_commas = comma_count
+                        best_tags = text.strip()
+
+                if best_tags and max_commas >= 1:  # At least 1 comma for valid tags
+                    result["tags"] = best_tags
+                    logger.debug(f"Found tags: {result['tags'][:100]}")
+        except Exception as e:
+            logger.warning(f"Could not extract tags: {e}")
+
+        # Download link - use selector since this is a link
+        try:
+            download_element = await page.query_selector('a[href*="/tor/download.php"]')
+            if download_element:
+                result["torrent_url"] = await download_element.get_attribute("href")
+                if result["torrent_url"] and result["torrent_url"].startswith("/"):
+                    result["torrent_url"] = config.MAM_BASE_URL + result["torrent_url"]
+                logger.debug(f"Found download link: {result['torrent_url'][:50]}...")
+        except Exception as e:
+            logger.warning(f"Could not extract download link: {e}")
+
+        # Cover image - using specific MyAnonamouse selector
+        try:
+            # Primary selector: #torDetPoster (the main cover image on MyM)
+            cover_selectors = [
+                '#torDetPoster',
+                'img.torDetPoster',
+                'img[id="torDetPoster"]',
+            ]
+            for selector in cover_selectors:
+                img = await page.query_selector(selector)
+                if img:
+                    src = await img.get_attribute("src")
+                    if src:
+                        # MyM cover images are already full URLs
+                        result["cover_image_url"] = src
+                        logger.debug(f"Found cover image: {result['cover_image_url'][:50]}...")
+                        break
+        except Exception as e:
+            logger.warning(f"Could not extract cover image: {e}")
+
+        # Description - using specific MyAnonamouse selector
+        try:
+            # Primary selector: #torDesc (the main description on MyM)
+            desc_selectors = [
+                '#torDesc',
+                'div#torDesc',
+                'div.torDesc',
+            ]
+            for selector in desc_selectors:
+                desc = await page.query_selector(selector)
+                if desc:
+                    # Get the text content of the description (br tags become line breaks)
+                    result["description_html"] = await desc.inner_text()
+                    logger.debug(f"Found description: {len(result['description_html'])} chars")
+                    break
+
+            if not result["description_html"]:
+                logger.debug("No description found with standard selectors")
+        except Exception as e:
+            logger.warning(f"Could not extract description: {e}")
+
+        # Added time - look for torrent ID or date patterns
+        try:
+            # Try to find upload date
+            for i, line in enumerate(lines):
+                # Look for date patterns like "2024-08-08" or "Added:"
+                date_match = re.search(r'(\d{4}-\d{2}-\d{2}(?:\s+\d{2}:\d{2}:\d{2})?)', line)
+                if date_match:
+                    result["added_time"] = date_match.group(1)
+                    logger.debug(f"Found added time: {result['added_time']}")
+                    break
+        except Exception as e:
+            logger.warning(f"Could not extract added time: {e}")
+
+        # Log what we extracted
+        logger.info(f"Successfully scraped: {result['title'] or 'Unknown'}")
         logger.debug(f"Author: {result['author']}, Size: {result['size']}, "
                     f"Files: {result['files_number']}, Filetypes: {result['filetypes']}")
 
@@ -170,131 +210,7 @@ async def scrape_detail_page(page: Page, url: str) -> Dict[str, Any]:
 
     except Exception as e:
         logger.error(f"Error scraping detail page {url}: {e}")
-        # Return partial result with at least the URL
-        result["detail_url"] = url
-        return result
-
-
-async def _extract_text(page: Page, selectors: list, field_name: str) -> Optional[str]:
-    """
-    Extract text content using multiple selector attempts.
-
-    Args:
-        page: Playwright page object
-        selectors: List of CSS selectors to try
-        field_name: Name of field (for logging)
-
-    Returns:
-        Extracted text or None
-    """
-    for selector in selectors:
-        try:
-            element = await page.query_selector(selector)
-            if element:
-                text = await element.inner_text()
-                text = text.strip()
-                if text:
-                    logger.debug(f"Extracted {field_name} using selector: {selector}")
-                    return text
-        except Exception as e:
-            logger.debug(f"Selector {selector} failed for {field_name}: {e}")
-            continue
-
-    logger.warning(f"Could not extract {field_name} - selectors need verification")
-    return None
-
-
-async def _extract_html(page: Page, selectors: list, field_name: str) -> Optional[str]:
-    """
-    Extract HTML content using multiple selector attempts.
-
-    Args:
-        page: Playwright page object
-        selectors: List of CSS selectors to try
-        field_name: Name of field (for logging)
-
-    Returns:
-        Extracted HTML or None
-    """
-    for selector in selectors:
-        try:
-            element = await page.query_selector(selector)
-            if element:
-                html = await element.inner_html()
-                html = html.strip()
-                if html:
-                    logger.debug(f"Extracted {field_name} HTML using selector: {selector}")
-                    return html
-        except Exception as e:
-            logger.debug(f"Selector {selector} failed for {field_name}: {e}")
-            continue
-
-    logger.warning(f"Could not extract {field_name} HTML - selectors need verification")
-    return None
-
-
-async def _extract_image_url(page: Page, selectors: list, field_name: str) -> Optional[str]:
-    """
-    Extract image URL from img src attribute.
-
-    Args:
-        page: Playwright page object
-        selectors: List of CSS selectors to try
-        field_name: Name of field (for logging)
-
-    Returns:
-        Image URL or None
-    """
-    for selector in selectors:
-        try:
-            element = await page.query_selector(selector)
-            if element:
-                src = await element.get_attribute("src")
-                if src:
-                    # Make absolute URL if relative
-                    if src.startswith("//"):
-                        src = "https:" + src
-                    elif src.startswith("/"):
-                        src = config.MAM_BASE_URL + src
-                    logger.debug(f"Extracted {field_name} using selector: {selector}")
-                    return src
-        except Exception as e:
-            logger.debug(f"Selector {selector} failed for {field_name}: {e}")
-            continue
-
-    logger.warning(f"Could not extract {field_name} - selectors need verification")
-    return None
-
-
-async def _extract_link_url(page: Page, selectors: list, field_name: str) -> Optional[str]:
-    """
-    Extract URL from anchor href attribute.
-
-    Args:
-        page: Playwright page object
-        selectors: List of CSS selectors to try
-        field_name: Name of field (for logging)
-
-    Returns:
-        Link URL or None
-    """
-    for selector in selectors:
-        try:
-            element = await page.query_selector(selector)
-            if element:
-                href = await element.get_attribute("href")
-                if href:
-                    # Make absolute URL if relative
-                    if href.startswith("/"):
-                        href = config.MAM_BASE_URL + href
-                    logger.debug(f"Extracted {field_name} using selector: {selector}")
-                    return href
-        except Exception as e:
-            logger.debug(f"Selector {selector} failed for {field_name}: {e}")
-            continue
-
-    logger.warning(f"Could not extract {field_name} - selectors need verification")
-    return None
+        raise
 
 
 if __name__ == "__main__":
@@ -317,24 +233,14 @@ if __name__ == "__main__":
 
         # Set up logging
         from utils import setup_logging
-        setup_logging(config.LOG_FILE, config.LOG_LEVEL)
+        setup_logging(config.LOG_FILE, "DEBUG")
 
-        # Ask for a test URL
-        test_url = input("\nEnter a MyAnonamouse torrent detail URL (e.g., /t/1060422): ").strip()
-        if not test_url:
-            test_url = "https://www.myanonamouse.net/t/1060422"
-            print(f"Using example URL: {test_url}")
-        elif not test_url.startswith("http"):
-            test_url = config.MAM_BASE_URL + test_url
+        # Test URL - use a known torrent
+        test_url = "https://www.myanonamouse.net/t/1134304"
 
         async with async_playwright() as p:
             browser, context = await create_browser_context(p)
-
-            # Create a new page
-            if config.LOGIN_MODE == "cookies":
-                page = await context.new_page()
-            else:
-                page = await context.new_page()
+            page = await context.new_page()
 
             # Ensure logged in
             if not await ensure_logged_in(page):
@@ -342,22 +248,23 @@ if __name__ == "__main__":
                 await browser.close()
                 return
 
-            # Test scraping
-            print(f"\nScraping: {test_url}")
+            print(f"\nTesting scraper on: {test_url}")
+
             try:
-                result = await scrape_detail_page(page, test_url)
+                data = await scrape_detail_page(page, test_url)
 
-                print("\n=== Scrape Results ===")
-                for key, value in result.items():
-                    if key == "description_html" and value:
-                        print(f"{key}: {value[:100]}..." if len(value) > 100 else f"{key}: {value}")
-                    else:
-                        print(f"{key}: {value}")
-
-                # Take a screenshot for verification
-                screenshot_path = "test_scraper_result.png"
-                await page.screenshot(path=screenshot_path)
-                print(f"\nScreenshot saved to: {screenshot_path}")
+                print("\n=== Scraped Data ===")
+                print(f"Title: {data['title']}")
+                print(f"Author: {data['author']}")
+                print(f"Co-Author: {data.get('co_author', 'N/A')}")
+                print(f"Size: {data['size']}")
+                print(f"Tags: {data['tags'][:100] if data['tags'] else None}")
+                print(f"Files: {data['files_number']}")
+                print(f"Filetypes: {data['filetypes']}")
+                print(f"Added: {data['added_time']}")
+                print(f"Cover: {data['cover_image_url'][:50] if data['cover_image_url'] else None}")
+                print(f"Download: {data['torrent_url'][:50] if data['torrent_url'] else None}")
+                print(f"Description length: {len(data['description_html']) if data['description_html'] else 0} chars")
 
             except Exception as e:
                 print(f"✗ Error testing scraper: {e}")
