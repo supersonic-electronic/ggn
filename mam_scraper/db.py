@@ -34,6 +34,8 @@ def init_db(db_path: str = "mam.db") -> sqlite3.Connection:
             title TEXT,
             author TEXT,
             co_author TEXT,
+            series_name TEXT,
+            series_id INTEGER,
             size TEXT,
             tags TEXT,
             files_number INTEGER,
@@ -56,6 +58,15 @@ def init_db(db_path: str = "mam.db") -> sqlite3.Connection:
     except sqlite3.OperationalError:
         logger.info("Adding co_author column to existing database")
         cursor.execute("ALTER TABLE mam_torrents ADD COLUMN co_author TEXT")
+        conn.commit()
+
+    # Migration: Add series_name and series_id columns if they don't exist
+    try:
+        cursor.execute("SELECT series_name FROM mam_torrents LIMIT 1")
+    except sqlite3.OperationalError:
+        logger.info("Adding series_name and series_id columns to existing database")
+        cursor.execute("ALTER TABLE mam_torrents ADD COLUMN series_name TEXT")
+        cursor.execute("ALTER TABLE mam_torrents ADD COLUMN series_id INTEGER")
         conn.commit()
 
     # Create index on detail_url for faster lookups
@@ -103,11 +114,11 @@ def save_to_db(conn: sqlite3.Connection, record: Dict[str, Any]) -> bool:
     try:
         cursor.execute("""
             INSERT OR REPLACE INTO mam_torrents (
-                detail_url, title, author, co_author, size, tags, files_number,
+                detail_url, title, author, co_author, series_name, series_id, size, tags, files_number,
                 filetypes, added_time, description_html, cover_image_url,
                 torrent_url, search_label, search_position, search_url, scraped_at
             ) VALUES (
-                :detail_url, :title, :author, :co_author, :size, :tags, :files_number,
+                :detail_url, :title, :author, :co_author, :series_name, :series_id, :size, :tags, :files_number,
                 :filetypes, :added_time, :description_html, :cover_image_url,
                 :torrent_url, :search_label, :search_position, :search_url, :scraped_at
             )

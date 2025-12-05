@@ -57,16 +57,16 @@ SEARCHES = [
 # These are designed to be polite to the MyAnonamouse servers
 SAFE_CRAWL = {
     # Minimum wait time after each page action (seconds)
-    "min_delay_seconds": float(os.getenv("MIN_DELAY_SECONDS", "3")),
+    "min_delay_seconds": float(os.getenv("MIN_DELAY_SECONDS", "1.5")),
 
     # Maximum wait time for random sleep range (seconds)
-    "max_delay_seconds": float(os.getenv("MAX_DELAY_SECONDS", "7")),
+    "max_delay_seconds": float(os.getenv("MAX_DELAY_SECONDS", "3.5")),
 
     # Number of pages to crawl before taking a long pause
     "pages_before_long_pause": int(os.getenv("PAGES_BEFORE_LONG_PAUSE", "15")),
 
     # Duration of long pause (seconds)
-    "long_pause_seconds": int(os.getenv("LONG_PAUSE_SECONDS", "20")),
+    "long_pause_seconds": int(os.getenv("LONG_PAUSE_SECONDS", "10")),
 
     # Maximum pages to crawl per search (safety limit)
     "max_pages_per_search": int(os.getenv("MAX_PAGES_PER_SEARCH", "50")),

@@ -1,0 +1,1865 @@
+
+The JSON API provides an easily parseable interface to GGn. This can be useful for scripts and other tools. Below is the list of information available, the arguments that can be passed to each API, the format of the results, and an extended explanation on the results. This is a modified version of the Gazelle API and may not contain all of the same endpoints as other Gazelle sites. If there is an API missing that you would like to see added, post about it here to let us know!
+
+Using the API bestows upon you a certain level of trust and responsibility. Abusing or using this API for malicious purposes is a bannable offense and will not be taken lightly.
+
+Refrain from making more than five (5) requests every ten (10) seconds.
+
+You can view your API usage history here. It will show the first access time for an endpoint by a given key from a given IP. If you do not recognize an entry, report it to staff ASAP.
+
+
+Authentication
+
+To use the API, you must have an API key.
+To obtain API keys, go to your profile settings and scroll down to the API Keys section near the bottom, fill in a key name, select any permissions the key will need for your task at hand, and hit Save Profile. Your API key will be displayed at the top of the page one time. API keys are not visible anywhere and staff are not able to retrieve them if lost. You will have to delete and recreate the API key if you lose it.
+
+
+Endpoint Permissions
+
+Each API key can be assigned permissions which determine what endpoints that key has access to. Permissions are not needed for API endpoints that return the same results independent of the API key used, such as the search endpoint. Endpoints like the item equip endpoint and the userlog endpoint require the permission(s) noted within their entry.
+
+
+Outline
+
+All request URLs are in the form: api.php?request=<ACTION>
+
+API keys are to be sent via an X-API-Key header on the HTTP request.
+
+All the JSON returned is in the form:
+
+{
+  "status" : "success",
+  "response" : {
+    // Response data.
+  }
+}
+
+
+
+If the request is invalid, or a problem occurs, the status will be failure. In this case the value of response is undefined. The HTTP response code will also reflect any errors occurred with your request.
+
+
+Index
+
+URL: api.php
+
+Arguments: None
+
+Permissions: None
+
+Response format:
+When sending no request the API will return the current version of the API. This can be parsed by scripts needing to ensure the availability of the new/updated endpoints. This version number will be incremented as future changes are made. We are using semvar versioning and will increment the patch version (last digit) when backwards compatible modifications are made to existing endpoints, the minor version (2nd digit) when new endpoints are added, and the major version (1st digit) when we make breaking API changes.
+
+{
+    "status": "success",
+    "response": {
+        "api_version": "2.1.0"
+    }
+}
+
+
+
+
+User Info
+
+
+Quick User Info
+
+URL: api.php?request=quick_user
+
+Arguments: None
+
+Permissions: User
+
+Response format:
+
+{
+    "status": "success",
+    "response": {
+        "username": "xFyrios",
+        "id": 24,
+        "authkey": "redacted",
+        "passkey": "redacted",
+        "notifications": {
+            "messages": 0,
+            "notifications": 9000,
+            "newAnnouncement": 1
+        },
+        "userstats": {
+            "uploaded": 585564424629,
+            "downloaded": 177461229738,
+            "ratio": 3.29,
+            "requiredratio": 0.6,
+            "class": "VIP"
+        }
+    }
+}
+
+
+
+Response Explanation:
+
+
+
+User Ratio Stats
+
+URL: api.php?request=user_stats_ratio
+
+Arguments: None
+
+Permissions: User
+
+Response format:
+
+{
+    "status": "success",
+    "response": {
+        "uploaded": "2045599024952",
+        "downloaded": "296585624668",
+        "ratio": 6.8971617462642,
+        "buffer": 1749013400284,
+        "disposable": 1929167982158.6,
+        "reqratio": "0.39257143"
+    }
+}
+
+
+
+Response Explanation:
+
+
+
+User Profile
+
+URL: api.php?request=user
+
+Arguments:
+
+    id - id of the user to display
+    name - username of the user to display
+    (use either id or name, not both)
+
+
+
+Permissions: None*
+
+Response format:
+
+{
+    "status": "success",
+    "response": {
+        "id": 24,
+        "username": "xFyrios",
+        "avatar": "[inlineurl]http://v0lu.me/rubadubdub.png",
+        "avatarType": 1,
+        "isFriend": false,
+        "bbProfileText": " A whole bunch of info!",
+        "profileText": " A whole bunch of info!",
+        "bbTitle": "This is my custom title.",
+        "title": "This is my custom title.",
+        "stats": {
+            "joinedDate": "2014-10-28 14:26:12",
+            "lastAccess": "2017-08-09 00:17:52",
+            "onIRC": false,
+            "uploaded": 585564424629,
+            "downloaded": 177461229738,
+            "fullDownloaded": 237461229738,
+            "purchasedDownload": 10737418240,
+            "ratio": 3.3,
+            "requiredRatio": 0.6,
+            "shareScore": 5.5,
+            "gold": 1000
+        },
+        "personal": {
+            "class": "VIP",
+            "facilitator": false,
+            "hnrs": 1,
+            "paranoia": 0,
+            "paranoiaText": "Off",
+            "donor": true,
+            "warned": false,
+            "enabled": true,
+            "publicKey": "",
+            "parked": false,
+            // The below 4 items are only returned if this is the logged in user
+            "ip": "127.0.0.1",
+            "passkey": redacted,
+            "donated": "19.00",
+            "invites": "2"
+        },
+        "community": {
+            "clan": "Fire",
+            "profileViews": 100,
+            "hourlyGold": 2,
+            "posts": 863,
+            "actualPosts": 663,
+            "threads": 4,
+            "forumLikes": 82,
+            "forumDislikes": 3,
+            "ircLines": 2042,
+            "ircActualLines": 1084,
+            "torrentComments": 13,
+            "collections": 1,
+            "requestsFilled": 0,
+            "bountyEarnedUpload": 10737418240,
+            "bountyEarnedGold": 0,
+            "requestsVoted": 13,
+            "bountySpentUpload": 0,
+            "bountySpentGold": 200,
+            "reviews": 2,
+            "uploaded": 29,
+            "seeding": 309,
+            "leeching": 0,
+            "snatched": 678,
+            "uniqueSnatched": 643,
+            "seedSize": 403601607,
+            "invited": 7
+        },
+       "buffs": {
+            "Upload": 3,
+            "Download": 0.5,
+            "ForumPosts": 2,
+            "IRCLines": 1,
+            "IRCBonus": 2,
+            "CommunityXP": 1,
+            "TorrentsXP": 1,
+            "CommunityGold": 2,
+            "TorrentsGold": 1,
+            "ItemCost": 1,
+            "BountyFrom": 1,
+            "BountyOn": 1,
+            "Chance": 2
+        },
+       "achievements": {
+            "userLevel": "Legendary Gamer",
+            "nextLevel": "Master Gamer",
+            "totalPoints": 3600,
+            "pointsToNextLvl": 600
+       }
+    }
+}
+
+
+
+Response Explanation:
+
+
+
+Userlog
+
+URL: api.php?request=userlog
+
+Arguments:
+
+    page - page number to display (default: 1)
+    limit - the amount of results to show per page (default: 50)
+    search - search for logs containing a string (case-insensitive)
+
+
+
+Permissions: User
+
+Response format:
+
+{
+    "status": "success",
+    "response": [
+        {
+            "time": "2021-03-13 04:03:24",
+            "message": "+42 Found 14 gold."
+        },
+        [repeat above 25 times]
+    ]
+}
+
+
+
+
+User Community Stats
+
+URL: api.php?request=community_stats
+
+Arguments:
+
+    userid - id of the user to display
+
+
+
+Response format:
+
+{
+    "status": "success",
+    "response": {
+        "leeching": "0",  //Controlled by Seeding Stats paranoia setting
+        "seeding": "15", //Controlled by Seeding Stats paranoia setting
+        "snatched": "295", //Controlled by Downloads paranoia setting
+        "usnatched": "285", //Controlled by Downloads paranoia setting
+        "downloaded": "1,230", //Controlled by Downloads paranoia setting
+        "udownloaded": "1,200", //Controlled by Downloads paranoia setting
+        "seedingperc": 5.26 //Controlled by Downloads paranoia setting
+    }
+}
+
+
+
+Response Explanation:
+
+
+
+Messages
+
+
+Inbox
+
+URL: api.php?request=inbox
+
+Arguments:
+
+    page - page number to display (default: 1)
+    type - one of: inbox or sentbox (default: inbox)
+    sort - if set to unread then unread messages come first
+    search - filter messages by search string
+    searchtype - one of: subject, message, or user
+
+
+
+Permissions: User
+
+Response format:
+
+{
+    "status": "success",
+    "response": {
+        "currentPage": 1,
+        "pages": 3,
+        "messages": [
+            {
+                "convId": 3421929,
+                "subject": "1 of your torrents has been deleted for inactivity",
+                "unread": false,
+                "sticky": false,
+                "participants": [
+                    {
+                        "userid": "24",
+                        "username": "xFyrios",
+                    },
+                    {
+                        "userid": "0",
+                        "username": "System",
+                    },
+                    // ...
+                ],
+                "date": "2017-06-12 00:54:01"
+            },
+            // ...
+        ]
+    }
+}
+
+
+
+
+Conversations
+
+URL: api.php?request=inbox&type=viewconv
+
+Arguments:
+
+    id - id of the message to display
+
+
+
+Permissions: User
+
+Response format:
+
+{
+    "status": "success",
+    "response": {
+        "convId": 3421929,
+        "subject": "1 of your torrents has been deleted for inactivity",
+        "sticky": false,
+        "messages": [
+            {
+                "messageId": 4507261,
+                "senderId": 0,
+                "senderName": "System",
+                "sentDate": "2012-06-12 00:54:01",
+                "avatar": "[inlineurl]http://v0lu.me/rubadubdub.png",
+                "bbBody": "One of your uploads has been deleted for being unseeded.  Since it didn't break any rules (we hope), please feel free to re-upload it.\n\nThe following torrent was deleted:\nThe Elder Scrolls V: Skyrim",
+                "body": "One of your uploads has been deleted for being unseeded.  Since it didn't break any rules (we hope), please feel free to re-upload it.<br />\n<br />\nThe following torrent was deleted:<br />\nThe Elder Scrolls V: Skyrim"
+            },
+           // ...
+        ]
+    }
+}
+
+
+
+
+Send a PM
+
+URL: api.php?request=inbox&type=send
+
+Arguments:
+
+    to - the user id of who you want to PM
+    body - the body of the message
+    subject - the subject of a new PM
+    convid - the ID of an existing conversation
+
+
+
+Permissions: User
+
+Response format:
+
+{
+    "status": "success",
+    "response": {
+        "convId": 3421929
+     }
+}
+
+
+
+Response Explanation:
+
+
+
+Mark Read
+
+URL: api.php?request=inbox&type=markread
+
+Arguments:
+
+    messages[] - a list of conversation IDs to mark as read
+
+
+
+Permissions: User
+
+Response format:
+
+{
+    "status": "success",
+    "response": "Conversation 867, 868 marked read"
+}
+
+
+
+
+Mark Unread
+
+URL: api.php?request=inbox&type=markunread
+
+Arguments:
+
+    messages[] - a list of conversation IDs to mark as unread
+
+
+
+Permissions: User
+
+Response format:
+
+{
+    "status": "success",
+    "response": "Conversation 867, 868 marked unread"
+}
+
+
+
+
+Search
+
+URL: api.php?request=search
+
+Arguments:
+
+    search_type - what kind of thing is being searched (torrents, requests, collections)
+    Various, depending on search type
+
+
+
+Permissions: None
+
+Torrents: Show
+
+Requests: Show
+
+Collections: Show
+
+
+Torrents
+
+
+Master Group
+
+URL: api.php?request=master_group
+
+Argument:
+
+    id - master group's id
+    groupid - a group in a master group
+
+
+
+Permissions: None
+
+Response format:
+
+{
+    "status": "success",
+    "response": {
+        "ID": 4,
+        "Name": "The Elder Scrolls V: Skyrim",
+        "Groups": :[2752,2753,2805,4920,47599,87438]
+    }
+}
+
+
+
+
+Torrent Group
+
+URL: api.php?request=torrentgroup
+
+Arguments:
+
+    id - torrent's group id
+    hash - hash of a torrent in the torrent group (must be uppercase)
+    name - the exact torrent group's name
+
+
+
+Permissions: None
+
+Response format:
+When specifying a name, only the group information will be returned, not torrent information. All groups sharing the name will be returned. When specifying a group id or torrent hash, all data including torrents will be returned for that group.
+
+{
+    "status": "success",
+    "response": {
+        "group": {
+            "bbWikiBody": "The Elder Scrolls V: Skyrim is an action role-playing open world video game developed by Bethesda Game Studios and published by Bethesda Softworks...",
+            "wikiBody": "The Elder Scrolls V: Skyrim is an action role-playing open world video game developed by Bethesda Game Studios and published by Bethesda Softworks...",
+            "wikiImage": "[inlineurl]https://ptpimg.me/q58d5s.jpg",
+            "id": 2753,
+            "name": "The Elder Scrolls V: Skyrim",
+            "aliases": [
+                "Skyrim",
+                "Elder Scrolls 5"
+            ],
+            "screenshots": [
+                "https%3A%2F%2Fptpimg.me%2Fr5gc47.jpg",
+                "https%3A%2F%2Fptpimg.me%2Fokj0ls.jpg",
+                "https%3A%2F%2Fptpimg.me%2F863ba3.jpg"
+            ],
+            "trailer": "[inlineurl]https://www.youtube.com/watch?v=6umhTJQltak",
+            "year": 2011,
+            "rating": "M",
+            "metaRating": {
+                "score": "94",
+                "percent": "94%",
+                "link": "http%3A%2F%2Fwww.metacritic.com%2Fgame%2Fpc%2Fthe-elder-scrolls-v-skyrim%2Fcritic-reviews"
+            },
+            "ignRating": {
+                "score": "9.5",
+                "percent": "95%",
+                "link": "http%3A%2F%2Fwww.ign.com%2Farticles%2F2011%2F11%2F10%2Fthe-elder-scrolls-v-skyrim-review"
+            },
+            "gamespotRating": {
+                "score": "9",
+                "percent": "90%",
+                "link": "https%3A%2F%2Fwww.gamespot.com%2Freviews%2Fthe-elder-scrolls-v-skyrim-review%2F1900-6344622%2F"
+            },
+            "categoryId": 1,
+            "categoryName": "Games",
+            "masterGroup": 4,
+            "time": "2018-04-29 21:25:24",
+            "tags": [
+                "open.world",
+                "fantasy",
+                "role.playing.game",
+                "action",
+                "adventure",
+                // ...
+            ],
+            "weblinks": {
+                "GamesWebsite": "[inlineurl]https://elderscrolls.bethesda.net/en/skyrim",
+                "Wikipedia": "[inlineurl]https://en.wikipedia.org/wiki/The_Elder_Scrolls_V:_Skyrim",
+                "Giantbomb": "[inlineurl]https://www.giantbomb.com/the-elder-scrolls-v-skyrim/3030-33394/",
+                "Steam": "[inlineurl]https://store.steampowered.com/app/72850/The_Elder_Scrolls_V_Skyrim/",
+                // ...
+            },
+            "similarGroups": [
+                {
+                    "groupId": 15810,
+                    "votes": 30
+                },
+                {
+                    "groupId": 21465,
+                    "votes": 22
+                },
+                {
+                    "groupId": 16614,
+                    "votes": 15
+                },
+               // ...
+            ],
+            "platform":"Windows",
+            "specialCollections": {
+                "Developer": [
+                    {
+                        "ID": "170",
+                        "Name": "Bethesda Game Studios"
+                    }
+                ],
+                "Publisher": [
+                    {
+                        "ID": "173",
+                        "Name": "Bethesda Softworks"
+                    }
+                ],
+                "Designer": [
+                    {
+                        "ID": "171",
+                        "Name": "Emil Pagliarulo"
+                    }
+                ],
+                "Composer": [
+                    {
+                        "ID": "174",
+                        "Name": "Jeremy Soule"
+                    }
+                ],
+                "Engine": [
+                    {
+                        "ID": "175",
+                        "Name": "Creation Engine"
+                    },
+                    {
+                        "ID": "512",
+                        "Name": "Havok"
+                    }
+                ],
+                "Feature": [
+                    {
+                        "ID": "1526",
+                        "Name": "Microtransactions"
+                    },
+                    {
+                        "ID": "551",
+                        "Name": "Native Controller Support"
+                    }
+                ]
+            }
+        },
+        "torrents": [
+            {
+                "id": 5214,
+                "type": "Torrent",
+                "link": "",
+                "format": "",
+                "encoding": "",
+                "region": "",
+                "language": "English",
+                "remastered": false,
+                "remasterYear": 0,
+                "remasterTitle": "",
+                "scene": true,
+                "hasCue": false,
+                "releaseTitle": "The.Elder.Scrolls.V.Skyrim.V2-GGn",
+                "releaseType": "GGn Internal",
+                "gameDOXType": "",
+                "gameDOXVersion": "",
+                "fileCount": 6,
+                "size": 8927750726,
+                "seeders": 22,
+                "leechers": 0,
+                "snatched": 739,
+                "freeTorrent": false,
+                "neutralTorrent": false,
+                "reported": false,
+                "time": "2012-08-03 17:10:57",
+                "bbDescription": "Nothing ripped.\r\nThis includes patch 1.7 (latest patch as of the date of the upload), the official HD texture pack and the add-on "Dawnguard"...",
+                "description": "Nothing ripped.\r\nThis includes patch 1.7 (latest patch as of the date of the upload), the official HD texture pack and the add-on "Dawnguard"...",
+                "fileList": "The Elder Scrolls V Skyrim-1.bin{{{2098998016}}}|||The Elder Scrolls V Skyrim-2.bin{{{2100000000}}}|||The Elder Scrolls V Skyrim-3.bin{{{2100000000}}}|||The Elder Scrolls V Skyrim-4.bin{{{2100000000}}}|||The Elder Scrolls V Skyrim-5.bin{{{527751004}}}|||The Elder Scrolls V Skyrim.exe{{{1001706}}}",
+                "filePath": "The.Elder.Scrolls.V.Skyrim.Inc.Add.on-GGn",
+                "userId": 9248,
+                "username": "Gruselgurke"
+            },
+            {
+                "id": 16354,
+                "type": "Torrent",
+                "link": "",
+                "format": "",
+                "encoding": "",
+                "region": "",
+                "language": "English",
+                "remastered": false,
+                "remasterYear": 0,
+                "remasterTitle": "",
+                "scene": true,
+                "hasCue": false,
+                "releaseTitle": "The.Elder.Scrolls.V.Skyrim.Update.13-RELOADED",
+                "releaseType": "GameDOX",
+                "gameDOXType": "Update",
+                "gameDOXVersion": "1.13",
+                "fileCount": 14,
+                "size": 169086313,
+                "seeders": 23,
+                "leechers": 0,
+                "snatched": 614,
+                "freeTorrent": false,
+                "neutralTorrent": false,
+                "reported": false,
+                "time": "2013-03-23 10:36:21",
+                "bbDescription": "[align=center][img]https://gazellegames.net/nfoimg/16354.png[/img][/align]",
+                "description": "<div style=\"text-align:center;\"><img style=\"max-width: 600px;\" onclick=\"lightbox.init(this,600);\" alt=\"https:\/\/gazellegames.net\/nfoimg\/16354.png\" src=\"https:\/\/gazellegames.net\/nfoimg\/16354.png\" \/><\/div>",
+                "fileList": "reloaded.nfo{{{3808}}}|||rld-tesvsu13.r00{{{15000000}}}|||rld-tesvsu13.r01{{{15000000}}}|||rld-tesvsu13.r02{{{15000000}}}|||rld-tesvsu13.r03{{{15000000}}}|||rld-tesvsu13.r04{{{15000000}}}|||rld-tesvsu13.r05{{{15000000}}}|||rld-tesvsu13.r06{{{15000000}}}|||rld-tesvsu13.r07{{{15000000}}}|||rld-tesvsu13.r08{{{15000000}}}|||rld-tesvsu13.r09{{{15000000}}}|||rld-tesvsu13.r10{{{4082181}}}|||rld-tesvsu13.rar{{{15000000}}}|||rld-tesvsu13.sfv{{{324}}}",
+                "filePath": "The.Elder.Scrolls.V.Skyrim.Update.13-RELOADED",
+                "userId": 0,
+                "username": "Anonymous"
+            },
+           // ...
+        ]
+    }
+}
+
+
+
+Response Explanation:
+
+
+
+Torrent
+
+URL: api.php?request=torrent
+
+Arguments:
+
+    id - torrent's id
+    hash - torrent's hash (must be uppercase)
+
+
+
+Permissions: None
+
+Response format:
+
+{
+    "status": "success",
+    "response": {
+        "group": {
+            "bbWikiBody": "The Elder Scrolls V: Skyrim is an action role-playing open world video game developed by Bethesda Game Studios and published by Bethesda Softworks...",
+            "wikiBody": "The Elder Scrolls V: Skyrim is an action role-playing open world video game developed by Bethesda Game Studios and published by Bethesda Softworks...",
+            "wikiImage": "[inlineurl]https://ptpimg.me/q58d5s.jpg",
+            "id": 2753,
+            "name": "The Elder Scrolls V: Skyrim",
+            "aliases": [
+                "Skyrim",
+                "Elder Scrolls 5"
+            ],
+            "year": 2011,
+            "categoryId": 1,
+            "categoryName": "Games",
+            "masterGroup": 4,
+            "time": "2018-04-29 21:25:24",
+            "gameInfo": {
+                "screenshots": [
+                    "https%3A%2F%2Fptpimg.me%2Fr5gc47.jpg", 
+                    "https%3A%2F%2Fptpimg.me%2Fokj0ls.jpg", 
+                    "https%3A%2F%2Fptpimg.me%2F863ba3.jpg"
+                ],
+                "trailer": "[inlineurl]https://www.youtube.com/watch?v=6umhTJQltak",
+                "rating": "M",
+                "metaRating": {
+                    "score": "94",
+                    "percent": "94%",
+                    "link": "http%3A%2F%2Fwww.metacritic.com%2Fgame%2Fpc%2Fthe-elder-scrolls-v-skyrim%2Fcritic-reviews"
+                },
+                "ignRating": {
+                    "score": "9.5",
+                    "percent": "95%",
+                    "link": "http%3A%2F%2Fwww.ign.com%2Farticles%2F2011%2F11%2F10%2Fthe-elder-scrolls-v-skyrim-review"
+                },
+                "gamespotRating": {
+                    "score": "9",
+                    "percent": "90%",
+                    "link": "https%3A%2F%2Fwww.gamespot.com%2Freviews%2Fthe-elder-scrolls-v-skyrim-review%2F1900-6344622%2F"
+                },
+                "weblinks": {
+                    "GamesWebsite": "[inlineurl]https://elderscrolls.bethesda.net/en/skyrim",
+                    "Wikipedia": "[inlineurl]https://en.wikipedia.org/wiki/The_Elder_Scrolls_V:_Skyrim",
+                    "Giantbomb": "[inlineurl]https://www.giantbomb.com/the-elder-scrolls-v-skyrim/3030-33394/",
+                    "Steam": "[inlineurl]https://store.steampowered.com/app/72850/The_Elder_Scrolls_V_Skyrim/",
+                    // ...
+                },
+            },
+            "tags": [
+                "open.world",
+                "fantasy",
+                "role.playing.game",
+                "action",
+                "adventure",
+                // ...
+            ],
+            "platform":"Windows"
+        },
+        "torrent": {
+            "id": 5214,
+            "infoHash": "3D711F650AEEFBA61F844963CC479F2F4605DA40",
+            "type": "Torrent",
+             "link": "",
+            "format": "",
+            "encoding": "",
+            "region": "",
+            "language": "English",
+            "remastered": false,
+            "remasterYear": 0,
+            "remasterTitle": "",
+            "scene": true,
+            "hasCue": false,
+            "releaseTitle": "The.Elder.Scrolls.V.Skyrim.V2-GGn",
+            "releaseType": "GGn Internal",
+            "gameDOXType": "",
+            "gameDOXVersion": "",
+            "fileCount": 6,
+            "size": 8927750726,
+            "seeders": 22,
+            "leechers": 0,
+            "snatched": 739,
+            "freeTorrent": false,
+            "neutralTorrent": false,
+            "reported": false,
+            "time": "2012-08-03 17:10:57",
+            "bbDescription": "Nothing ripped.\r\nThis includes patch 1.7 (latest patch as of the date of the upload), the official HD texture pack and the add-on "Dawnguard"...",
+            "description": "Nothing ripped.\r\nThis includes patch 1.7 (latest patch as of the date of the upload), the official HD texture pack and the add-on "Dawnguard"...",
+            "fileList": "The Elder Scrolls V Skyrim-1.bin{{{2098998016}}}|||The Elder Scrolls V Skyrim-2.bin{{{2100000000}}}|||The Elder Scrolls V Skyrim-3.bin{{{2100000000}}}|||The Elder Scrolls V Skyrim-4.bin{{{2100000000}}}|||The Elder Scrolls V Skyrim-5.bin{{{527751004}}}|||The Elder Scrolls V Skyrim.exe{{{1001706}}}",
+            "filePath": "The.Elder.Scrolls.V.Skyrim.Inc.Add.on-GGn",
+            "userId": 9248,
+            "username": "Gruselgurke"
+        }
+    }
+}
+
+
+
+Deleted Torrent Notifications
+
+URL: api.php?request=delete_notifs
+
+Arguments:
+
+    limit - The maximum number of notifications to list
+    page - Page #
+    clear - Either 'all' or a comma-separated list of torrent IDs to clear notifications for
+    mark_unread - Set to 1 to mark returned notifications as read
+
+
+
+Permissions: Torrents
+Response format:
+
+{
+    "status": "success",
+    "errors": [],
+    "response": [
+        {
+            "TorrentID": 12,
+            "GroupID": 22024,
+            "TorrentName": "Some Torrent",
+            "DeleteTime": "2022-11-27 09:06:52",
+            "DeleteReason": "Trump",
+            "Note": "New version",
+            "ReplacementTorrents": [
+                "13",
+                "14"
+            ],
+            "UnRead": 1
+        },
+        // ...
+    ]
+}
+
+
+
+Collection
+
+URL: api.php?request=collection
+
+Arguments:
+
+    id - collection's id
+
+
+
+Permissions: None
+
+Response format:
+
+{
+    "status": "success",
+    "response": {
+      "id": 35,
+      "name": "Half-Life",
+      "bbDescription": "",
+      "description": "Half-Life (stylized HλLF-LIFE) is a series of first-person shooter video games that share a single science fiction alternate history. The games in the series all utilize either the GoldSrc or Source engines and are linear, narrative, single-player titles.<br />\r\n<br />\r\nValve Corporation is the developer, and partly the publisher and distributor, for their signature games of the series. The major titles in the series feature the player as the protagonist, Gordon Freeman, a theoretical physicist initially employed by the Black Mesa Research Facility. Two of these games, Half-Life and Half-Life 2 are full length titles, while two more, Half-Life 2: Episode One and Half-Life 2: Episode Two, are shorter, episodic titles. A final episode, Half-Life 2: Episode Three, was originally scheduled to appear around Christmas 2007, but now has no public release date.",
+      "image": "[inlineurl]https://ptpimg.me/s66h6w.png",
+      "packUrl": "",
+      "deleted": false,
+      "collageCategoryID": 2,
+      "collageCategoryName": "Series",
+      "locked": false,
+      "torrentGroupIDList": [
+          "5008",
+          "1435",
+          "6476",
+          "2830",
+          // ...
+      ]
+  }
+}
+
+
+
+Response Explanation:
+
+
+
+Wiki
+
+URL: api.php?request=wiki
+
+Arguments:
+
+    id - wiki article's id
+
+
+
+Permissions: Wiki
+
+Response format:
+
+{
+    "status": "success",
+    "response": {
+        "title": "User Classes",
+        "bbBody": "The user class system is based on your achievements on the site. Being more active and getting higher achievements will get you more points ...",
+        "body": "The user class system is based on your achievements on the site. Being more active and getting higher achievements will get you more points ...",
+        "aliases": "classes,promotion,rank,ranks,userclasses,usergroup,userprivileges",
+        "authorID": 24,
+        "authorName": "xFyrios",
+        "date": "2018-04-25 05:16:54",
+        "revision": 147
+    }
+}
+
+
+
+
+Site Log
+
+URL: api.php?request=sitelog
+
+Arguments:
+
+    page - page number to display (default: 1)
+    limit - the amount of results to show per page (default: 25)
+    search - search for logs containing a string (case-insensitive)
+
+
+
+Permissions: Site Info
+
+Response format:
+
+{
+    "status": "success",
+    "response": [
+        {
+            "time": "2021-03-13 04:03:24",
+            "message": "Torrent 378786 (Amid the Lines [FitGirl Repack]) (2,115.22 MB) was uploaded anonymously."
+        },
+        [repeat above 25 times]
+    ]
+}
+
+
+
+Response Explanation:
+
+
+
+Items
+
+
+Item Info
+
+URL: api.php?request=items
+
+Arguments:
+
+    itemid - the item id to query
+    itemids - OR a list of item id's to query in a json format e.g. [1,2,3,4]
+
+
+
+Response format:
+The items in the response will be different based on the item type and what values it has set.
+
+{
+   "status":"success",
+   "response":[
+      {
+         "id":"17",
+         "name":"Username Black Background (1 Week)",
+         "image":"[inlineurl]https://ptpimg.me/9o5287.jpg",
+         "description":"Give your username a black background for 1 week.",
+         "category":"Username customizations",
+         "searchCategories":"11User Customizations11 11Username customizations11",
+         "itemType":0,
+         "stock":0,
+         "infStock":true,
+         "costType":0,
+         "maxDiscount":"0.000000",
+         "gold":"50",
+         "donorPoints":0,
+         "upload":0,
+         "download":0,
+         "dateAdded":"2018-03-18 02:16:31",
+         "featured":false,
+         "craftable":false,
+         "notTradeable":false,
+         "disabled":false,
+         "hideSearch":false,
+         "hideUntilReq":false,
+         "oneTime":{
+            "featured_slots":"0",
+            "invites":"0",
+            "irc_voice":"",
+            "profile_background":"",
+            "profile_game_theme":"",
+            "profile_logo":"",
+            "sticky_torrent":"",
+            "sticky_request":"",
+            "username_color":"",
+            "username_color_period":"",
+            "username_glow":"",
+            "username_glow_period":"",
+            "username_background":"#000000",
+            "username_background_period":"1",
+            "username_emphasis":"",
+            "avatar_direction":"",
+            "avatar_Effect":"",
+            "avatar_Animate":"",
+            "avatar_Body":"",
+            "avatar_Background":"",
+            "avatar_Face":"",
+            "avatar_Hair":"",
+            "avatar_Bangs":"",
+            "avatar_HairOption":"",
+            "avatar_HairOption2":"",
+            "avatar_Ears":"",
+            "avatar_Tail":"",
+            "fl_token":0,
+            "hnr_removal":0
+         },
+         "attributes":[
+            
+         ]
+      }
+   ]
+}
+
+
+
+Response Explanation:
+
+
+
+Item Search
+
+URL: api.php?request=items&type=search (alternate type is 'shop')
+
+Arguments:
+(All options are optional and you can use multiple in one search)
+
+    search - a query to search (case-insensitive). By default searches just the items name.
+    search_more - when true, makes the search additionally query item descriptions and book excerpts.
+    category - used to filter by a category. This should be the name of a category (e.g. "New Site Features"). Alternatively this can be set to 'Featured Only' or 'All'.
+    item_type - used to filter by item type. This should be a number. The possible types are: 100 - Standard, 2 - Equippable, 3 - Book, 4 - Card, 5 - Pack, 6 - Adventure Club Item.
+    cost_type - used to filter by cost type. This should be a number. The possible types are: 100 - Gold, 2 - Upload, 3 - Download, 4 - Donor Points.
+    cost_amount - set the max cost of items you want returned.
+    in_stock - when true, only returns items that are in stock.
+    no_featured - by default the search returns featured results first. When this is set to true it won't prioritize featured items.
+    order_by - options include: category, dateadded, name, cost, and itemtype.
+    order_way - asc or desc.
+    page - page number to display (default: 1)
+    limit - the amount of results to show per page (default: 30)
+
+
+
+Response format:
+The search works the same as on the shop page. All arguments are the same. This only returns item id's. If you want info on those items, use the above item info endpoint.
+
+{
+   "status":"success",
+   "response":[
+      69,
+      61,
+      50,
+      49,
+      48,
+      118,
+      117,
+      116,
+      115,
+      135,
+      83
+   ]
+}
+
+
+
+
+Users Items / Inventory
+
+URL: api.php?request=items&type=inventory (alternate type is 'users_items')
+
+Arguments:
+
+    include_info - if false or not set, this endpoint only returns item ids. If true, it will return item info for each item under the 'item' key.
+    userid - id of the user to display. default: self
+
+
+
+Permissions: Items
+
+Response format:
+Currently this endpoint will only return your own items, not the items of other users. When used, it returns ALL of your items in one go.
+
+{
+   "status":"success",
+   "response":[
+      {
+         "itemid":"2",
+         "equipid":"0",
+         "amount":"13",
+         "item":{
+            "id":"2",
+            "name":"Featured Item Slot",
+            "image":"[inlineurl]https://ptpimg.me/f8f0mo.png",
+            "description":"One featured item slot for your profile. This allows you to display your favorite store-bought item for everyone to see!",
+            "category":"Profile customizations",
+            "searchCategories":"11User Customizations11 11Profile customizations11",
+            "itemType":0
+         }
+      },
+      {
+         "itemid":"108",
+         "equipid":"50",
+         "amount":"1",
+         "item":{
+            "id":"108",
+            "name":"Basic Black Sword",
+            "image":"static/common/items/Cover/Weapon/1_black.png",
+            "description":"A basic black sword. For cutting things.",
+            "category":"Equipment",
+            "searchCategories":"11Avatar Changes and Equipment11 11Equipment11",
+            "itemType":"2"
+         }
+      }
+   ]
+}
+
+
+
+Response Explanation:
+
+
+
+Users Equipment (Equipped & Unequipped)
+
+URL: api.php?request=items&type=users_equippable
+
+Arguments:
+
+    include_info - if false or not set, this endpoint only returns item ids. If true, it will return item info for each item under the 'item' key.
+    userid - id of the user to display. default: self
+
+
+
+Permissions: Items
+
+Response format:
+
+{
+   "status":"success",
+   "response":[
+      {
+         "id":"4",
+         "itemid":"53",
+         "timeUntilBreak":"2591772",
+         "equippedBefore":"1",
+         "experience":"0",
+         "level":0,
+         "item":{
+            "id":"53",
+            "name":"Bronze Upload Armor",
+            "image":"static/common/items/Cover/Body Armor/Bronze_Upload_Armor.png",
+            "description":"Armor with upload enhancing properties. This armor is made from bronze and will give you a small 1.1x upload buff. It has a total life span of 1 month, after which it will need repairs.",
+            "category":"Equipment",
+            "searchCategories":"11Avatar Changes and Equipment11 11Equipment11",
+            "itemType":"2"
+         }
+      },
+      {
+         "id":"5",
+         "itemid":"57",
+         "timeUntilBreak":"Null",
+         "equippedBefore":"1",
+         "experience":"0",
+         "level":0,
+         "item":{
+            "id":"57",
+            "name":"Gazelle Pet",
+            "image":"[inlineurl]https://ptpimg.me/0n66xm.png",
+            "description":"Who needs friends when you've got Gazelles like these!<br />\r\n<br />\r\nOn your first anniversary, please think Gazelle and adopt today.<br />\r\n<br />\r\nThis Gazelle offers no buffs and is purely cosmetic for those of you who enjoy the look. :)",
+            "category":"Equipment",
+            "searchCategories":"11Avatar Changes and Equipment11 11Equipment11",
+            "itemType":"2"
+         }
+      }
+   ]
+}
+
+
+
+Response Explanation:
+
+
+
+Users Equipped
+
+URL: api.php?request=items&type=users_equipped
+
+Arguments:
+
+    include_info - if false or not set, this endpoint only returns item ids. If true, it will return item info for each item under the 'item' key.
+
+
+
+Permissions: Items
+
+Response format:
+
+{
+   "status":"success",
+   "response":[
+      {
+         "slotid":"2",
+         "equipid":"12",
+         "itemid":"53",
+         "breakTime":"2021-06-29 16:17:48",
+         "buffID":16,
+         "experience":0,
+         "level":0,
+         "equipTime": "2022-07-14 21:36:25",
+         "item":{
+            "id":"53",
+            "name":"Bronze Upload Armor",
+            "image":"static/common/items/Cover/Body Armor/Bronze_Upload_Armor.png",
+            "description":"Armor with upload enhancing properties. This armor is made from bronze and will give you a small 1.1x upload buff. It has a total life span of 1 month, after which it will need repairs.",
+            "category":"Equipment",
+            "searchCategories":"11Avatar Changes and Equipment11 11Equipment11",
+            "itemType":"2"
+         }
+      },
+      {
+         "slotid":"7",
+         "equipid":"49",
+         "itemid":"108",
+         "breakTime":"0000-00-00 00:00:00",
+         "buffID":"",
+         "experience":0,
+         "level":0,
+         "equipTime": "2022-07-14 21:36:25",
+         "item":{
+            "id":"108",
+            "name":"Basic Black Sword",
+            "image":"static/common/items/Cover/Weapon/1_black.png",
+            "description":"A basic black sword. For cutting things.",
+            "category":"Equipment",
+            "searchCategories":"11Avatar Changes and Equipment11 11Equipment11",
+            "itemType":"2"
+         }
+      }
+   ]
+}
+
+
+
+Response Explanation:
+
+
+
+Users Buffs
+
+URL: api.php?request=items&type=users_buffs
+
+Arguments:
+
+    None
+
+
+
+Permissions: Items
+
+Response format:
+Returns a list of the users current buffs. This includes any global buffs and buff cap adjustments.
+
+{
+   "status":"success",
+   "response":{
+      "Upload":2.4,
+      "Download":1,
+      "ForumPosts":2,
+      "IRCLines":1,
+      "IRCBonus":1,
+      "CommunityXP":1,
+      "TorrentsXP":1,
+      "CommunityGold":2,
+      "TorrentsGold":2.15,
+      "ItemCost":1,
+      "BountyFrom":1,
+      "BountyOn":1,
+      "Chance":1.6
+   }
+}
+
+
+
+
+Users Crafted Recipes
+
+URL: api.php?request=items&type=crafted_recipes
+
+Arguments:
+
+    None
+
+
+
+Permissions: Items
+
+Response format:
+
+{
+   "status":"success",
+   "response":[
+      {
+         "id":"7",
+         "name":"Bronze Bar",
+         "uses":"2"
+      },
+      {
+         "id":"14",
+         "name":"Mithril Dwarf Companion",
+         "uses":"1"
+      },
+      {
+         "id":"4",
+         "name":"Upload Potion Sampler",
+         "uses":"2"
+      }
+   ]
+}
+
+
+
+Response Explanation:
+
+
+
+Get Crafting Recipe
+
+URL: api.php?request=items&type=get_crafting_recipe
+
+Arguments:
+
+    recipeid - the recipe id to query (get this from the Users Crafted Recipes endpoint)
+    recipeids - OR a list of recipe id's to query in a json format e.g. [1,2,3,4]
+
+
+
+Permissions: Items
+
+Response format:
+
+{
+   "status":"success",
+   "response":[
+      {
+         "id":"4",
+         "name":"",
+         "recipe":"EEEEEEEEEE00039EEEEE0004600041EEEEEEEEEEEEEEE",
+         "requirement":"1",
+         "result":"48"
+      },
+      {
+         "id":"14",
+         "name":"",
+         "recipe":"EEEEEEEEEEEEEEE0010300100EEEEEEEEEEEEEEEEEEEE",
+         "requirement":"0",
+         "result":"104"
+      }
+   ]
+}
+
+
+
+Response Explanation:
+
+
+
+Crafting Result
+
+URL: api.php?request=items&type=crafting_result
+
+Arguments:
+
+    action - find (default) or take. find will return the result if one exists, take will take the resulting crafting item if possible.
+    recipeid - the recipe id to use (get this from the Users Crafted Recipes endpoint) (will only work if you have crafted the recipe at least once before)
+    recipe - OR a recipe string (get this from the Get Crafting Recipe endpoint) (will work whether you have crafted the recipe before or not)
+
+
+
+Permissions: Items
+
+Response format:
+This is the response format when using the find action. When using take it will just return a success or error message.
+
+{
+   "status":"success",
+   "response":{
+      "ID":"51",
+      "Name":"Bronze Bar",
+      "Image":"[inlineurl]https://ptpimg.me/030l4p.png",
+      "Requirement":""
+   }
+}
+
+
+
+Response Explanation:
+
+
+
+Purchase Item
+
+URL: api.php?request=items&type=purchase (alternate type is 'buy')
+
+Arguments:
+
+    itemid - The item to purchase. You can obtain an itemid using the Item Search endpoint or from the site.
+
+
+
+Permissions: Items
+
+Response format:
+
+{
+   "status":"success",
+   "response":"Item Purchased!"
+}
+
+
+
+Response Explanation:
+
+
+
+Use Item
+
+URL: api.php?request=items&type=use
+
+Arguments:
+
+    itemid - The item to use. You can obtain this itemid using the Users Items endpoint.
+    amount - The amount of this item to use.
+
+
+
+Permissions: Items
+
+Response format:
+This currently does not support items that require inputs. e.g. custom title or a fl token
+
+{
+   "status":"success",
+   "response":"Item used! 20.00 GB of upload gained."
+}
+
+
+
+Response Explanation:
+
+
+
+Unpack Item
+
+URL: api.php?request=items&type=unpack
+
+Arguments:
+
+    itemid - The item to unpack. You can obtain this itemid using the Users Items endpoint.
+    amount - The amount of this item to unpack.
+
+
+
+Permissions: Items
+
+Response format:
+
+{
+   "status":"success",
+   "response":"<span class='label'>Items unpacked!</span>1 Eww Ruby Rud (forced use)."
+}
+
+
+
+Response Explanation:
+
+
+
+Equip Item
+
+URL: api.php?request=items&type=equip
+
+Arguments:
+
+    equipid - The equipid of the specific piece of equipment you want to equip. You can obtain this from the Users Equipment endpoint.
+
+
+
+Permissions: Items
+
+Response format:
+
+{
+   "status":"success",
+   "response":"Item Equipped! 11.55 days until breakage."
+}
+
+
+
+Response Explanation:
+
+
+
+Unequip Item
+
+URL: api.php?request=items&type=unequip
+
+Arguments:
+
+    equipid - The equipid of the specific piece of equipment you want to equip. You can obtain this from the Users Equipment endpoint.
+    slotid - OR The slotid you want to remove equipment from.
+
+
+
+Permissions: Items
+
+Response format:
+
+{
+   "status":"success",
+   "response":"Item Unequipped!"
+}
+
+
+
+Response Explanation:
+
+
+
+Forums
+
+
+Thread Info
+
+URL: api.php?request=forums&type=thread_info
+
+Arguments:
+
+    id - the thread ID
+
+
+
+Permissions: Forums
+
+Response format:
+
+{
+   "status": "success",
+   "response": {
+      "id": "123456",
+      "title": "Secrets of the Universe",
+      "forumID": 170,
+      "locked": false,
+      "postCountLimit": 0,
+      "postTimeLimit": 0,
+      "subscribed": false,
+      "canPost": true
+   }
+}
+
+
+
+
+Site Stats
+
+URL: api.php?request=site_stats
+
+Arguments: None
+
+Permissions: None
+
+Response format:
+
+{
+    "status": "success",
+    "response": {
+        "maxUsers": 30000,
+        "enabledUsers": 15225,
+        "usersActiveThisDay": 2515,
+        "usersActiveThisWeek": 6655,
+        "usersActiveThisMonth": 10916,
+        "torrentCount": 91003,
+        "gamesCount": 34831,
+        "platformCount": 91,
+        "requestCount": 6268,
+        "filledRequestCount": 4284,
+        "seederCount": 707145,
+        "leecherCount": 8308
+    }
+}
+
+
+
+
+
+
+Legendary Gamer+
+
+
+
+Torrent Stats
+
+URL: api.php?request=torrent_stats
+
+Arguments: None
+
+Permissions: Site Info
+
+Response format:
+
+{
+    "status": "success",
+    "response": {
+        "overall": {
+            "total": {
+                "torrents": 91017,
+                "size": 151718414201574,
+                "files": 2034889,
+                "links": 19483
+            },
+            "mean": {
+                "torrentsPerUser": 5,
+                "size": 1666923917,
+                "filesPerTorrent": 22,
+                "filesize": 74558570
+            }
+        },
+        "frequency": {
+            "today": {
+                "torrents": 147,
+                "size": 243293487803,
+                "files": 2701
+            },
+            "week": {
+                "torrents": 1339,
+                "size": 2336037242707,
+                "files": 17749
+            },
+            "perDayWeek": {
+                "torrents": 191.28571428571,
+                "size": 333719606101,
+                "files": 2535.5714285714
+            },
+            "month": {
+                "torrents": 5886,
+                "size": 6678976471463,
+                "files": 59321
+            },
+            "perDayMonth": {
+                "torrents": 196.2,
+                "size": 222632549048.77,
+                "files": 1977.3666666667
+            }
+        }
+    }
+}
+
+
+
+
+Economic Stats
+
+URL: api.php?request=economic_stats
+
+Arguments: None
+
+Permissions: Site Info
+
+Response format:
+
+{
+    "status": "success",
+    "response": {
+        "overall": {
+            "total": {
+                "gold": 376188160,
+                "goldPerHour": 425.95768745995,
+                "goldPerHour7": 194.42141910884,
+                "available": 62462.968745842,
+                "usersOver10": 6,
+                "usersOver7": 9,
+                "usersAt0": 14983,
+                "upload": 15738307433256576,
+                "download": 6335575207609374,
+                "buffer": 9402732225647204
+            },
+            "mean": {
+                "gold": 24581.035037875,
+                "goldPerHour": 1.3269709889718,
+                "goldPerHour7": 0.62314557406679,
+                "ratio": "2.48411",
+                "upload": 1028378687484.1,
+                "download": 413981652352.94,
+                "buffer": 614397035131.16,
+                "invites": 0.63042341871406
+            },
+            "max": {
+                "gold": 49297912,
+                "goldPerHour": 53.86462466971,
+                "upload": 1695063090175768,
+                "download": 2706377640402911
+            },
+            "requestsBounty": {
+                "upload": 278067479017932,
+                "availableUpload": 167329378021751,
+                "gold": 45550487,
+                "availableGold": 13148040
+            }
+        },
+        "swarms": {
+            "total": {
+                "seeders": 707145,
+                "leechers": 8308,
+                "peers": 715453,
+                "snatches": 5756885,
+                "seedToLeechRatio": "85.11615",
+                "seedToSnatchRatio": "0.12283"
+            },
+            "meanPerTorrent": {
+                "seeders": 7.7693727545404,
+                "leechers": 0.091279651054199,
+                "snatches": 46.348077831614
+            },
+            "meanPerUser": {
+                "seeders": 46.206547307893,
+                "leechers": 0.54286461055933,
+                "snatches": 376.16864871929
+            },
+            "singleSwarm": {
+                "totalUsers": 7579,
+                "meanSeeders": 93.303206227735,
+                "meanLeechers": 1.0961868320359,
+                "meanSnatches": 556.59889167436
+            },
+            "health": {
+                "lowSeedTorrents": 842,
+                "deadTorrents": 94
+            }
+        }
+    }
+}
+
+
+
+Response Explanation:
+
+
+
+Item Stats
+
+URL: api.php?request=item_stats
+
+Arguments:
+
+    itemid - id of the item to display
+
+
+
+Permissions: Site Info
+
+Response format:
+
+{
+    "status": "success",
+    "response": {
+        "id": "57",
+        "name": "Gazelle Pet",
+        "category": "Equipment",
+        "count": 4,
+        "itemProperties": {
+            "ID": "57",
+            "Name": "Gazelle Pet",
+            "InfStock": "1",
+            "Image": "[inlineurl]https://ptpimg.me/0n66xm.png",
+            "Description": "Who needs friends when you've got Gazelles like these!\r\n\r\nOn your first anniversary, please think Gazelle and adopt today.\r\n\r\nThis Gazelle offers no buffs and is purely cosmetic for those of you who enjoy the look. :)",
+            "Category": "Equipment",
+            "SearchCategories": "11Avatar Changes and Equipment11 11Equipment11",
+            "ItemType": "2",
+            "MaxDiscount": "0.000000",
+            "DateAdded": "2018-03-31 03:44:05",
+            "OneTime": {
+                "fl_token": 0,
+                "hnr_removal": 0
+            },
+            "Attributes": [],
+            "MaxHNRsReq": "9",
+            "BuffReq": [],
+            "EquipImage": "Pets/gazelle_back.png",
+            "HFlip": "1",
+            "CanAnimate": "1",
+            "EquipType": "19",
+            "EquipTypeName": "Pet",
+            "EquipTypeDisplay": "1",
+            "DefaultHPos": "35",
+            "DefaultHPos2": "-35",
+            "Depth": "127",
+            "EquipBox": "14,15,OR",
+            "CostType": 0,
+            "Stock": 0,
+            "DefaultVPos": 0,
+            "DefaultVPos2": 0,
+            "bbDescription": "Who needs friends when you've got Gazelles like these!\r\n\r\nOn your first anniversary, please think Gazelle and adopt today.\r\n\r\nThis Gazelle offers no buffs and is purely cosmetic for those of you who enjoy the look. :)",
+        }
+    }
+}

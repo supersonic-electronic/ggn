@@ -37,6 +37,8 @@ async def scrape_detail_page(page: Page, url: str) -> Dict[str, Any]:
             "title": None,
             "author": None,
             "co_author": None,
+            "series_name": None,
+            "series_id": None,
             "size": None,
             "tags": None,
             "files_number": 0,
@@ -111,6 +113,27 @@ async def scrape_detail_page(page: Page, url: str) -> Dict[str, Any]:
                     logger.debug(f"Found co-author: {result['co_author']}")
         except Exception as e:
             logger.warning(f"Could not extract authors: {e}")
+
+        # Series extraction - using HTML selector
+        try:
+            # Find series link: <a class="altColor" href="/tor/browse.php?series=1918&...">Halo</a>
+            series_link = await page.query_selector('a.altColor[href*="/tor/browse.php?series="]')
+
+            if series_link:
+                # Get series name from link text
+                series_name = await series_link.inner_text()
+                result["series_name"] = series_name.strip().replace('\xa0', ' ').strip()
+
+                # Extract series ID from href
+                href = await series_link.get_attribute("href")
+                if href:
+                    # Parse series ID from URL like: /tor/browse.php?series=1918&tor[cat][]=0
+                    series_match = re.search(r'series=(\d+)', href)
+                    if series_match:
+                        result["series_id"] = int(series_match.group(1))
+                        logger.debug(f"Found series: {result['series_name']} (ID: {result['series_id']})")
+        except Exception as e:
+            logger.warning(f"Could not extract series: {e}")
 
         # Tags extraction - using HTML selector for cleaner data
         try:

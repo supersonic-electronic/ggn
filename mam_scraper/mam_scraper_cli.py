@@ -99,22 +99,22 @@ Examples:
     parser.add_argument(
         '--min-delay',
         type=float,
-        default=3.0,
-        help='Minimum delay between requests in seconds (default: 3.0)'
+        default=1.5,
+        help='Minimum delay between requests in seconds (default: 1.5)'
     )
 
     parser.add_argument(
         '--max-delay',
         type=float,
-        default=7.0,
-        help='Maximum delay between requests in seconds (default: 7.0)'
+        default=3.5,
+        help='Maximum delay between requests in seconds (default: 3.5)'
     )
 
     parser.add_argument(
         '--long-pause',
         type=int,
-        default=20,
-        help='Long pause duration in seconds every N pages (default: 20)'
+        default=10,
+        help='Long pause duration in seconds every N pages (default: 10)'
     )
 
     parser.add_argument(
@@ -175,13 +175,19 @@ async def main():
     print("MYANONAMOUSE EBOOK SCRAPER")
     print("=" * 70)
     print(f"\nConfiguration:")
-    print(f"  Tags: {', '.join(args.tags)}")
-    print(f"  Formats: {', '.join(args.formats)}")
-    print(f"  Max torrents: {args.max_torrents}")
-    print(f"  Max pages: {args.max_pages}")
-    print(f"  Database: {args.db}")
-    print(f"  Delays: {args.min_delay}-{args.max_delay}s (long pause: {args.long_pause}s every {args.pages_before_pause} pages)")
-    print(f"  Log level: {args.log_level}")
+    print(f"  Tags:                         {', '.join(args.tags)}")
+    print(f"  Formats:                      {', '.join(args.formats)}")
+    print(f"  Max torrents:                 {args.max_torrents}")
+    print(f"  Max pages:                    {args.max_pages}")
+    print(f"  Database:                     {args.db}")
+    print(f"  Log level:                    {args.log_level}")
+
+    print(f"\nSafe Crawling Parameters:")
+    print(f"  Request delays:               {args.min_delay}-{args.max_delay}s (avg {(args.min_delay + args.max_delay)/2:.1f}s)")
+    print(f"  Long pause:                   {args.long_pause}s every {args.pages_before_pause} pages")
+    avg_delay = (args.min_delay + args.max_delay) / 2
+    print(f"  Estimated time for 100:       ~{avg_delay * 100 / 60:.1f} minutes")
+    print(f"  Estimated time for {args.max_torrents}:       ~{avg_delay * args.max_torrents / 60:.1f} minutes ({avg_delay * args.max_torrents / 3600:.1f} hours)")
 
     if args.dry_run:
         print("\n⚠️  DRY RUN MODE - No actual scraping will occur")
@@ -222,6 +228,10 @@ async def main():
         "pages_before_long_pause": args.pages_before_pause,
         "long_pause_seconds": args.long_pause,
     })
+
+    # Track start time
+    import time
+    start_time = time.time()
 
     # Initialize database
     print(f"📊 Initializing database: {args.db}...")
@@ -286,23 +296,70 @@ async def main():
             # Restore original searches
             config.SEARCHES = original_searches
 
+            # Calculate elapsed time
+            elapsed_time = time.time() - start_time
+            hours = int(elapsed_time // 3600)
+            minutes = int((elapsed_time % 3600) // 60)
+            seconds = int(elapsed_time % 60)
+
             print("\n" + "=" * 70)
             print("✅ SCRAPE COMPLETE")
             print("=" * 70)
-            print("\nResults:")
+
+            # Results by search
+            print("\nResults by Search:")
             total_scraped = 0
             for label, count in results.items():
                 print(f"  {label}: {count} torrents")
                 total_scraped += count
 
-            # Final stats
+            # Final database stats with quality metrics
             final_stats = get_stats(db_conn)
-            print(f"\nDatabase Stats:")
-            print(f"  Total torrents in DB: {final_stats['total_torrents']}")
-            print(f"  New this run: {final_stats['total_torrents'] - stats['total_torrents']}")
+            new_this_run = final_stats['total_torrents'] - stats['total_torrents']
 
-            print(f"\n💾 Data saved to: {args.db}")
-            print(f"📋 Logs saved to: {config.LOG_FILE}")
+            # Get quality metrics from database
+            cursor = db_conn.cursor()
+            cursor.execute("""
+                SELECT
+                    COUNT(*) as total,
+                    SUM(CASE WHEN author IS NOT NULL AND author != '' THEN 1 ELSE 0 END) as has_author,
+                    SUM(CASE WHEN co_author IS NOT NULL AND co_author != '' THEN 1 ELSE 0 END) as has_coauthor,
+                    SUM(CASE WHEN tags IS NOT NULL AND tags != '' THEN 1 ELSE 0 END) as has_tags,
+                    SUM(CASE WHEN cover_image_url IS NOT NULL AND cover_image_url != '' THEN 1 ELSE 0 END) as has_cover,
+                    SUM(CASE WHEN description_html IS NOT NULL AND description_html != '' THEN 1 ELSE 0 END) as has_desc
+                FROM mam_torrents
+            """)
+            quality = cursor.fetchone()
+
+            print("\n" + "=" * 70)
+            print("📊 FINAL REPORT")
+            print("=" * 70)
+
+            print(f"\n⏱️  Time Elapsed:")
+            if hours > 0:
+                print(f"  {hours}h {minutes}m {seconds}s")
+            elif minutes > 0:
+                print(f"  {minutes}m {seconds}s")
+            else:
+                print(f"  {seconds}s")
+
+            print(f"\n📈 Extraction Summary:")
+            print(f"  New torrents this run:        {new_this_run}")
+            print(f"  Total in database:            {final_stats['total_torrents']}")
+            print(f"  Average speed:                {new_this_run / (elapsed_time / 60):.1f} torrents/minute" if elapsed_time > 0 else "")
+
+            print(f"\n✅ Data Completeness (All Database Entries):")
+            total = quality[0]
+            if total > 0:
+                print(f"  Authors:                      {quality[1]} / {total} ({100 * quality[1] / total:.1f}%)")
+                print(f"  Co-authors:                   {quality[2]} / {total} ({100 * quality[2] / total:.1f}%)")
+                print(f"  Tags:                         {quality[3]} / {total} ({100 * quality[3] / total:.1f}%)")
+                print(f"  Cover images:                 {quality[4]} / {total} ({100 * quality[4] / total:.1f}%)")
+                print(f"  Descriptions:                 {quality[5]} / {total} ({100 * quality[5] / total:.1f}%)")
+
+            print(f"\n💾 Output Files:")
+            print(f"  Database:                     {args.db}")
+            print(f"  Logs:                         {config.LOG_FILE}")
 
             # Export if requested
             if args.export:
