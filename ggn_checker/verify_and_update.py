@@ -209,7 +209,11 @@ def verify_book(client: GGNClient, title: str, author: str, title_prefix_words: 
         for match in strong_matches:
             formats = match.get('formats', '')
             if formats:
-                all_formats.update(formats.split(';'))
+                # Handle formats whether it's a string or list
+                if isinstance(formats, list):
+                    all_formats.update(formats)
+                else:
+                    all_formats.update(formats.split(';'))
             total_seeders += match.get('seeders_total', 0)
             total_snatched += match.get('snatched_total', 0)
 
